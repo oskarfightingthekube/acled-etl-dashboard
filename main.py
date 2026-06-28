@@ -1,5 +1,12 @@
+import logging
+
+from src.client import ACLEDClient
+
+
 def main():
-    print("Hello from acled-aws!")
+    logging.basicConfig(level=logging.INFO)
+    client = ACLEDClient()
+    client.get_token()
 
 
 if __name__ == "__main__":

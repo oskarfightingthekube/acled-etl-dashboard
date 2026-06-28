@@ -6,4 +6,6 @@ crash.*.log
 *.tfvars
 !*.tfvars.example
 *idea/
+*env
+*__pycache__/
 
