@@ -1,13 +1,12 @@
 import logging
 
-from src.ingest import full_load, incremental_load, delete_load
+from src.ingest import delete_load, event_load
 
 
 def main():
     logging.basicConfig(level=logging.INFO)
-    # full_load()
-    # incremental_load()
-    delete_load(full=True)
+    # delete_load(full=True)
+    # event_load()
 
 
 if __name__ == "__main__":
