@@ -53,6 +53,40 @@ resource "aws_glue_catalog_database" "acled" {
   name = "acled_${local.env}"
 }
 
+resource "aws_s3_object" "silver_transform_script" {
+  bucket = aws_s3_bucket.bronze.id
+  key    = "glue-scripts/silver_transform.py"
+  source = "${path.module}/../glue/silver_transform.py"
+  etag   = filemd5("${path.module}/../glue/silver_transform.py")
+}
+
+resource "aws_glue_job" "silver_transform" {
+  name     = "acled-silver-transform-${local.env}"
+  role_arn = aws_iam_role.glue_role.arn
+
+  command {
+    name            = "glueetl"
+    script_location = "s3://${aws_s3_bucket.bronze.bucket}/glue-scripts/silver_transform.py"
+    python_version  = "3"
+  }
+
+  default_arguments = {
+    "--database"            = aws_glue_catalog_database.acled.name
+    "--silver_bucket"         = aws_s3_bucket.silver.bucket
+    "--job-language"          = "python"
+    "--TempDir"               = "s3://${aws_s3_bucket.bronze.bucket}/glue-temp/"
+    "--enable-job-bookmarks"  = "job-bookmarks-disable"
+  }
+
+  glue_version      = "5.1"
+  number_of_workers = 2
+  worker_type       = "G.1X"
+
+  tags = {
+    Environment = local.env
+    Project     = "acled-pipeline"
+  }
+}
 
 resource "aws_iam_role" "glue_role" {
   name = "acled-glue-role-${local.env}"
