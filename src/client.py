@@ -21,6 +21,12 @@ class ACLEDClient:
         self._session = requests.Session()
         self.get_token()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc_info):
+        self._session.close()
+
     def get_token(self):
         response = self._session.post(
             self.settings.auth_url,
@@ -40,18 +46,23 @@ class ACLEDClient:
         )
         logger.info(f"auth successful{self._token.access_token[:10]}")
 
-    def get_pages(self):
+    def get_pages(self, extra_payload=None):
         url = self.settings.read_data_url
         headers = {"Authorization": f"Bearer {self._token.access_token}"}
         page = 1
 
         while True:
-            response = self._session.get(url, params={"_format": "csv",
-                                                      "page": page}, headers=headers)
+            payload = {"_format": "csv", "page": page}
+            if extra_payload:
+                payload.update(extra_payload)
+            response = self._session.get(url, params=payload, headers=headers)
+
             response.raise_for_status()
             data = response.text
             row_count = data.strip().count("\n")
-
+            if row_count == 0:
+                logger.info("no new data, stopping")
+                return
             yield data
             logger.info(f"page {page}, rows {row_count}")
 

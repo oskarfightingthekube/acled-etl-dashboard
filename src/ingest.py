@@ -1,4 +1,5 @@
-import logging
+import time
+from datetime import datetime
 
 import boto3
 
@@ -8,18 +9,61 @@ import logging
 logger = logging.getLogger(__name__)
 s3 = boto3.client("s3")
 
+settings = Settings()
+
+def _get_last_timestamp():
+    try:
+        response = s3.get_object(
+            Bucket=settings.s3_bronze_bucket,
+            Key=settings.s3_last_run_timestamp
+        )
+        return response["Body"].read().decode().strip()
+    except s3.exceptions.NoSuchKey:
+        return None
+
+
+def _save_timestamp():
+    s3.put_object(
+        Bucket=settings.s3_bronze_bucket,
+        Key=settings.s3_last_run_timestamp,
+        Body=str(int(time.time())).encode(),
+    )
+
+
+def incremental_load():
+    last_ts = _get_last_timestamp()
+    if last_ts is None:
+        logger.warning("no timestamp available")
+        return
+
+    with ACLEDClient() as client:
+        for i, page in enumerate(client.get_pages(
+            extra_payload={"timestamp": last_ts, "timestamp_where":">="},
+        ), 1):
+            key = settings.s3_incremental_prefix.format(
+                date=datetime.now().strftime("%Y-%m-%d"),
+                page=i
+            )
+            s3.put_object(
+                Bucket=settings.s3_bronze_bucket,
+                Key=key,
+                Body=page.encode("utf-8"),
+            )
+            logger.info(f"uploaded {key}")
+    _save_timestamp()
+    logger.info("incremental load completed")
 
 def full_load():
-    settings = Settings()
-    client = ACLEDClient()
-    start_enum = 1
-    for i, page in enumerate(client.get_pages(), start_enum):
-        key = settings.s3_full_load_prefix.format(page=i)
-        s3.put_object(
-            Bucket=settings.s3_bronze_bucket,
-            Key=key,
-            Body=page.encode("utf-8"),
-        )
 
-        logger.info(f"uploaded {key}")
-    logger.info("full load completed")
+    with ACLEDClient() as client:
+        for i, page in enumerate(client.get_pages(), 1):
+            key = settings.s3_full_load_prefix.format(page=i)
+            s3.put_object(
+                Bucket=settings.s3_bronze_bucket,
+                Key=key,
+                Body=page.encode("utf-8"),
+            )
+
+            logger.info(f"uploaded {key}")
+        _save_timestamp()
+        logger.info("full load completed")
