@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     page_size: int = 5_000
     request_timeout: int = 60
     s3_full_load_prefix: str = "events/full_load/page_{page:03d}.csv"
+    s3_incremental_prefix: str = "events/incremental/{date}/page_{page:03d}.csv"
+    s3_last_run_timestamp: str = "state/last_run_timestamp.txt"
 
     @property
     def auth_url(self):
