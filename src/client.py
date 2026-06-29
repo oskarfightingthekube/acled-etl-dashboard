@@ -46,8 +46,7 @@ class ACLEDClient:
         )
         logger.info(f"auth successful{self._token.access_token[:10]}")
 
-    def get_pages(self, extra_payload=None):
-        url = self.settings.read_data_url
+    def get_pages(self,url, extra_payload=None):
         headers = {"Authorization": f"Bearer {self._token.access_token}"}
         page = 1
 
