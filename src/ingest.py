@@ -54,42 +54,32 @@ def delete_load(full=True):
         logger.info(f"deleted load completed")
 
 
-def incremental_load():
-    last_ts = _get_last_timestamp()
-    if last_ts is None:
-        logger.warning("no timestamp available")
-        return
+def event_load(full=False):
+    if not full:
+        last_ts = _get_last_timestamp()
+        if last_ts is None:
+            logger.warning("no timestamp available, run with full=True first")
+            return
+        extra_payload = {"timestamp": last_ts, "timestamp_where": ">="}
+    else:
+        extra_payload = None
 
-    with ACLEDClient() as client:
-        for i, page in enumerate(client.get_pages(url=settings.read_data_url,
-                                                  extra_payload={"timestamp": last_ts, "timestamp_where": ">="},
-                                                  ), 1):
-            key = settings.s3_incremental_prefix.format(
-                date=datetime.now().strftime("%Y-%m-%d"),
-                page=i
-            )
-            s3.put_object(
-                Bucket=settings.s3_bronze_bucket,
-                Key=key,
-                Body=page.encode("utf-8"),
-            )
-            logger.info(f"uploaded {key}")
-    _save_timestamp()
-    logger.info("incremental load completed")
-
-
-def full_load():
     with ACLEDClient() as client:
         for i, page in enumerate(client.get_pages(
-            url=settings.read_data_url,
+                url=settings.read_data_url,
+                extra_payload=extra_payload,
         ), 1):
-            key = settings.s3_full_load_prefix.format(page=i)
+            key = settings.s3_events_prefix.format(
+                date=datetime.now().strftime("%Y-%m-%d"),
+                page=i,
+            )
             s3.put_object(
                 Bucket=settings.s3_bronze_bucket,
                 Key=key,
                 Body=page.encode("utf-8"),
             )
-
             logger.info(f"uploaded {key}")
-        _save_timestamp()
-        logger.info("full load completed")
+
+    _save_timestamp()
+    mode = "full" if full else "incremental"
+    logger.info(f"{mode} event load completed")
