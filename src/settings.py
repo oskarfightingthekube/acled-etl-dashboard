@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     request_timeout: int = 60
     s3_events_prefix: str = "events/{date}/page_{page:03d}.csv"
     s3_last_run_timestamp: str = "state/last_run_timestamp.txt"
-    s3_deletes_prefix: str = "events/deletes/{date}.csv"
+    s3_deletes_prefix: str = "deletes/{date}/page_{page:03d}.csv"
 
     @property
     def deleted_data_url(self):
