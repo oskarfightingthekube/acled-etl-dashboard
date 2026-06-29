@@ -28,6 +28,27 @@ resource "aws_s3_bucket" "gold" {
   }
 }
 
+resource "aws_glue_crawler" "bronze_events" {
+  name          = "acled-bronze-events-${local.env}"
+  role          = aws_iam_role.glue_role.arn
+  database_name = aws_glue_catalog_database.acled.name
+
+  s3_target {
+    path = "s3://${aws_s3_bucket.bronze.bucket}/events/"
+  }
+}
+
+resource "aws_glue_crawler" "bronze_deletes" {
+  name          = "acled-bronze-deletes-${local.env}"
+  role          = aws_iam_role.glue_role.arn
+  database_name = aws_glue_catalog_database.acled.name
+
+  s3_target {
+    path = "s3://${aws_s3_bucket.bronze.bucket}/deletes/"
+  }
+}
+
+
 resource "aws_glue_catalog_database" "acled" {
   name = "acled_${local.env}"
 }
