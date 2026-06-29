@@ -19,3 +19,47 @@
 - Aggregations, joins, calculated metrics
 - Reporting datasets optimized for BI tools
 - Only columns needed for business questions
+
+
+## Star Schema Model  
+![model.png](images/model.png)
+
+## Sample charts
+![chart-times-series.png](images/chart-times-series.png)
+
+![chart-countreis.png](images/chart-countreis.png)
+
+![chart-pie.png](images/chart-pie.png)
+
+## Business Questions
+
+### Geography and Scale
+1. Which countries and regions have the most events, and which event types are most common there?
+2. Where are the most deaths on the map, and which places have the highest number of fatalities per event?
+
+### Time Trends
+3. How did the number of events change over time (by year and month) for each `disorder_type`?
+4. Are there seasonal patterns? Which months have the most events and fatalities?
+
+### Event Types
+5. Which `event_type` and `sub_event_type` cause the most deaths, and what is the average number of fatalities per event?
+6. What is the ratio of peaceful protests to violent demonstrations, and how does it change over time?
+
+### Actors
+7. Which actors (`actor1`) cause the most events and deaths, and how did their activity change over time?
+8. Which types of interaction (e.g., State forces vs Rebels) happen most often and are the bloodiest?
+
+### Civilian Targeting
+9. What percentage of events includes `civilian_targeting`, and how does this change by region and actor type?
+
+### Sources and Precision
+10. Where do the sources come from (`source_scale`: local vs international) in each region, and do more sources mean more reported events?
+
+### Escalation
+11. Which countries had the biggest increase in events year-over-year (YoY), and does more events always mean more fatalities?
+
+### Per Capita Analysis
+12. Which countries have the most events and fatalities per capita (per 100k people), and how does this change the ranking compared to total numbers?
+
+
+
