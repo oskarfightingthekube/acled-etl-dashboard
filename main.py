@@ -1,12 +1,11 @@
 import logging
 
-from src.client import ACLEDClient
+from src.ingest import full_load
 
 
 def main():
     logging.basicConfig(level=logging.INFO)
-    client = ACLEDClient()
-    client.get_token()
+    full_load()
 
 
 if __name__ == "__main__":
