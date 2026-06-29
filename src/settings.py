@@ -11,6 +11,11 @@ class Settings(BaseSettings):
     s3_full_load_prefix: str = "events/full_load/page_{page:03d}.csv"
     s3_incremental_prefix: str = "events/incremental/{date}/page_{page:03d}.csv"
     s3_last_run_timestamp: str = "state/last_run_timestamp.txt"
+    s3_deletes_prefix: str = "events/deletes/{date}.csv"
+
+    @property
+    def deleted_data_url(self):
+        return f"{self.base_url}api/deleted/read"
 
     @property
     def auth_url(self):
