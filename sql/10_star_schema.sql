@@ -7,12 +7,20 @@
 --
 -- Star:
 --   fact_events (grain: one event)
---     ├─ dim_country     (iso              → country, region)
---     ├─ dim_date        (date_key         → year, month, month_name, quarter)
---     ├─ dim_event_type  (sub_event_type   → event_type, disorder_type)
---     ├─ dim_actor       (actor            = actor1)
---     └─ dim_source      (source_scale)
---   (dim_population from 07 joins on iso + year for per-capita.)
+--     ├─ dim_country          (iso            → country, region)
+--     ├─ dim_date             (date_key       → year, month, month_name, quarter)
+--     ├─ dim_event_type       (sub_event_type → event_type, disorder_type)
+--     ├─ dim_actor            (actor          = actor1)
+--     ├─ dim_source           (source_scale)
+--     └─ dim_population_year  (iso_year       → population; per-capita, Q12)
+--
+-- Design notes:
+--   * dim_date is a CONTINUOUS calendar (sequence 1997-01-01..2025-12-31), not
+--     DISTINCT event dates — required for Power BI "Mark as date table" and
+--     DATEADD/YoY time intelligence (Q9). 2025 is a partial year in the data.
+--   * dim_population_year exists because Power BI relationships are single-
+--     column only: iso_year = iso*10000 + year collapses the (iso, year)
+--     composite key into one INT on both sides. iso ≤ 3 digits → no collision.
 --
 -- VERIFIED in acled_dev (eu-central-1): fact = 2,669,096 rows; FK integrity =
 -- 0 orphan keys (every non-null fact key exists in its dimension).
@@ -23,6 +31,7 @@
 --   fact_events[sub_event_type] -> dim_event_type[sub_event_type]
 --   fact_events[actor1]         -> dim_actor[actor]
 --   fact_events[source_scale]   -> dim_source[source_scale]
+--   fact_events[iso_year]       -> dim_population_year[iso_year]
 -- =============================================================================
 
 -- --- dimensions ---
@@ -38,7 +47,7 @@ SELECT date_key,
        month(date_key)            as month,
        date_format(date_key,'%M') as month_name,
        quarter(date_key)          as quarter
-FROM (SELECT DISTINCT event_date date_key FROM acled_dev.gold_events_wide WHERE event_date IS NOT NULL);
+FROM UNNEST(sequence(date '1997-01-01', date '2025-12-31', interval '1' day)) AS t(date_key);
 
 CREATE TABLE acled_dev.dim_event_type
 WITH (format='PARQUET', external_location='s3://mw-acled-gold-dev/star/dim_event_type/') AS
@@ -53,6 +62,18 @@ CREATE TABLE acled_dev.dim_source
 WITH (format='PARQUET', external_location='s3://mw-acled-gold-dev/star/dim_source/') AS
 SELECT DISTINCT source_scale FROM acled_dev.gold_events_wide WHERE source_scale IS NOT NULL;
 
+-- per-capita bridge: one row per (iso, year) flattened to a single-column key,
+-- because Power BI relationships can't span two columns. Depends on
+-- dim_population (07_dim_population.sql).
+CREATE TABLE acled_dev.dim_population_year
+WITH (format='PARQUET', external_location='s3://mw-acled-gold-dev/star/dim_population_year/') AS
+SELECT iso_numeric * 10000 + year  as iso_year,
+       iso_numeric                 as iso,
+       year,
+       country_name,
+       population
+FROM acled_dev.dim_population;
+
 -- --- fact ---
 CREATE TABLE acled_dev.fact_events
 WITH (format='PARQUET', external_location='s3://mw-acled-gold-dev/star/fact_events/') AS
@@ -63,6 +84,8 @@ SELECT
     sub_event_type,                -- FK -> dim_event_type
     actor1,                        -- FK -> dim_actor (dim_actor.actor)
     source_scale,                  -- FK -> dim_source
+    CASE WHEN iso IS NOT NULL THEN iso * 10000 + year END
+                                   as iso_year,  -- FK -> dim_population_year
     interaction,                   -- degenerate attribute
     civilian_targeting_flag,       -- additive-ish measure (0/1)
     latitude, longitude,           -- point geometry
