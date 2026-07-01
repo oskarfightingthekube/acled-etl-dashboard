@@ -1,0 +1,209 @@
+"""ACLED ETL — bronze -> (Glue silver) -> gold_events_wide -> schemat gwiazdy.
+
+Idempotentny: przed każdym CTAS robi DROP TABLE IF EXISTS + czyści prefix S3,
+więc DAG można odpalać wielokrotnie (bare CREATE TABLE padłby przy 2. runie).
+
+SQL trzymany inline — TRZYMAĆ W SYNCU z sql/06_gold_conflict.sql i
+sql/10_star_schema.sql (źródło prawdy = pliki sql/).
+
+Gałąź Glue (crawler + silver job) jest opt-in (param run_glue), bo wymaga
+uprawnień glue:* których demo-user może nie mieć. Ścieżka Athena-only działa
+z samymi uprawnieniami Athena+S3+Glue-Data-Catalog.
+
+UWAGA: dim_population (źródłowy TSV World Bank) to jednorazowy setup
+(sql/07) — celowo NIE ma go w DAG-u, żeby nic nie czyściło jego S3.
+"""
+from __future__ import annotations
+
+import time
+
+import boto3
+import pendulum
+from airflow.decorators import dag, task
+from airflow.exceptions import AirflowSkipException
+from airflow.models.param import Param
+
+REGION = "eu-central-1"
+DB = "acled_dev"
+GOLD_BUCKET = "mw-acled-gold-dev"
+ATHENA_OUT = f"s3://{GOLD_BUCKET}/athena-results/"
+WORKGROUP = "primary"
+SILVER_GLUE_JOB = "acled-silver-transform-dev"
+BRONZE_CRAWLERS = ["acled-bronze-events-dev", "acled-bronze-deletes-dev"]
+
+
+def _athena(sql: str) -> None:
+    """Run one Athena statement, block until done, raise on failure."""
+    c = boto3.client("athena", region_name=REGION)
+    qid = c.start_query_execution(
+        QueryString=sql,
+        QueryExecutionContext={"Database": DB},
+        ResultConfiguration={"OutputLocation": ATHENA_OUT},
+        WorkGroup=WORKGROUP,
+    )["QueryExecutionId"]
+    while True:
+        st = c.get_query_execution(QueryExecutionId=qid)["QueryExecution"]["Status"]
+        if st["State"] in ("SUCCEEDED", "FAILED", "CANCELLED"):
+            if st["State"] != "SUCCEEDED":
+                raise RuntimeError(f"Athena {st['State']}: {st.get('StateChangeReason')}")
+            return
+        time.sleep(2)
+
+
+def _rebuild(table: str, prefix: str, ctas_body: str) -> None:
+    """Idempotent CTAS: drop table, wipe its S3 prefix, re-create."""
+    _athena(f"DROP TABLE IF EXISTS {DB}.{table}")
+    boto3.resource("s3", region_name=REGION).Bucket(GOLD_BUCKET).objects.filter(
+        Prefix=prefix
+    ).delete()
+    _athena(
+        f"CREATE TABLE {DB}.{table} WITH (format='PARQUET', "
+        f"external_location='s3://{GOLD_BUCKET}/{prefix}') AS {ctas_body}"
+    )
+
+
+GOLD_EVENTS_WIDE = """
+WITH deduped AS (
+    SELECT *, row_number() OVER (PARTITION BY event_id_cnty ORDER BY timestamp DESC) rn
+    FROM acled_dev.events
+),
+clean AS (
+    SELECT d.* FROM deduped d
+    LEFT JOIN (SELECT DISTINCT event_id_cnty FROM acled_dev.deletes) del
+        ON d.event_id_cnty = del.event_id_cnty
+    WHERE d.rn = 1 AND del.event_id_cnty IS NULL
+)
+SELECT
+    event_id_cnty,
+    CAST(event_date AS date)               AS event_date,
+    CAST(year AS int)                      AS year,
+    trim(replace(country, '"', ''))        AS country,
+    trim(replace(region, '"', ''))         AS region,
+    trim(replace(admin1, '"', ''))         AS admin1,
+    trim(replace(event_type, '"', ''))     AS event_type,
+    trim(replace(sub_event_type, '"', '')) AS sub_event_type,
+    trim(replace(disorder_type, '"', ''))  AS disorder_type,
+    trim(replace(actor1, '"', ''))         AS actor1,
+    trim(replace(actor2, '"', ''))         AS actor2,
+    trim(replace(interaction, '"', ''))    AS interaction,
+    CASE WHEN replace(civilian_targeting, '"', '') = 'Civilian targeting'
+         THEN 1 ELSE 0 END                 AS civilian_targeting_flag,
+    latitude, longitude,
+    CAST(iso AS int)                       AS iso,
+    trim(replace(source_scale, '"', ''))   AS source_scale,
+    CAST(fatalities AS int)                AS fatalities
+FROM clean
+"""
+
+STAR = {
+    "dim_country": (
+        "star/dim_country/",
+        "SELECT iso, arbitrary(country) country, arbitrary(region) region "
+        "FROM acled_dev.gold_events_wide WHERE iso IS NOT NULL GROUP BY iso",
+    ),
+    "dim_event_type": (
+        "star/dim_event_type/",
+        "SELECT sub_event_type, arbitrary(event_type) event_type, "
+        "arbitrary(disorder_type) disorder_type "
+        "FROM acled_dev.gold_events_wide WHERE sub_event_type IS NOT NULL "
+        "GROUP BY sub_event_type",
+    ),
+    "dim_actor": (
+        "star/dim_actor/",
+        "SELECT DISTINCT actor1 AS actor FROM acled_dev.gold_events_wide "
+        "WHERE actor1 IS NOT NULL",
+    ),
+    "dim_source": (
+        "star/dim_source/",
+        "SELECT DISTINCT source_scale FROM acled_dev.gold_events_wide "
+        "WHERE source_scale IS NOT NULL",
+    ),
+    "dim_population_year": (
+        "star/dim_population_year/",
+        "SELECT iso_numeric*10000+year iso_year, iso_numeric iso, year, "
+        "country_name, population FROM acled_dev.dim_population",
+    ),
+    "fact_events": (
+        "star/fact_events/",
+        "SELECT event_id_cnty, iso, event_date, sub_event_type, actor1, "
+        "source_scale, CASE WHEN iso IS NOT NULL THEN iso*10000+year END iso_year, "
+        "interaction, civilian_targeting_flag, latitude, longitude, year, fatalities "
+        "FROM acled_dev.gold_events_wide",
+    ),
+}
+
+DIM_DATE = (
+    "star/dim_date/",
+    "SELECT CAST(d AS date) date_key, year(d) year, month(d) month, "
+    "date_format(d,'%M') month_name, quarter(d) quarter "
+    "FROM UNNEST(sequence(date '1997-01-01', date '2025-12-31', interval '1' day)) AS t(d)",
+)
+
+
+@dag(
+    dag_id="acled_pipeline",
+    schedule=None,  # odpalany ręcznie (Trigger) — na obronę
+    start_date=pendulum.datetime(2026, 1, 1, tz="Europe/Warsaw"),
+    catchup=False,
+    params={"run_glue": Param(False, type="boolean",
+                              description="Crawler + silver Glue job (wymaga uprawnień glue:*)")},
+    doc_md=__doc__,
+)
+def acled_pipeline():
+
+    @task
+    def ingest():
+        # ponytail: ekstrakcja API->bronze żyje w src/ingest.py i wymaga klucza
+        # ACLED; w kontenerze demo pomijamy — bronze już jest w S3.
+        raise AirflowSkipException(
+            "Ingest pominięty — bronze już w S3. Pełny run: python main.py na hoście."
+        )
+
+    @task(trigger_rule="none_failed")
+    def crawl_bronze(**ctx):
+        if not ctx["params"]["run_glue"]:
+            raise AirflowSkipException("run_glue=False — pomijam crawlery")
+        glue = boto3.client("glue", region_name=REGION)
+        for name in BRONZE_CRAWLERS:
+            glue.start_crawler(Name=name)
+        for name in BRONZE_CRAWLERS:
+            while glue.get_crawler(Name=name)["Crawler"]["State"] != "READY":
+                time.sleep(10)
+
+    @task(trigger_rule="none_failed")
+    def silver_transform(**ctx):
+        if not ctx["params"]["run_glue"]:
+            raise AirflowSkipException("run_glue=False — pomijam Glue job")
+        glue = boto3.client("glue", region_name=REGION)
+        run_id = glue.start_job_run(JobName=SILVER_GLUE_JOB)["JobRunId"]
+        while True:
+            state = glue.get_job_run(JobName=SILVER_GLUE_JOB, RunId=run_id)["JobRun"]["JobRunState"]
+            if state in ("SUCCEEDED", "FAILED", "STOPPED", "TIMEOUT", "ERROR"):
+                if state != "SUCCEEDED":
+                    raise RuntimeError(f"Glue job {state}")
+                return
+            time.sleep(15)
+
+    @task(trigger_rule="none_failed")
+    def gold_events_wide():
+        _rebuild("gold_events_wide", "events_wide/", GOLD_EVENTS_WIDE)
+
+    @task
+    def dim_date():
+        _rebuild("dim_date", *DIM_DATE)
+
+    def star_task(name):
+        @task(task_id=name)
+        def _t():
+            prefix, body = STAR[name]
+            _rebuild(name, prefix, body)
+        return _t()
+
+    gold = gold_events_wide()
+    ingest() >> crawl_bronze() >> silver_transform() >> gold
+    dim_date()  # niezależny od danych — czysty kalendarz
+    for name in STAR:
+        gold >> star_task(name)
+
+
+acled_pipeline()

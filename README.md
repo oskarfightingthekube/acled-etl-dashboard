@@ -21,7 +21,15 @@
 - Only columns needed for business questions
 
 
-## Star Schema Model  
+## Star Schema Model
+Fact table `fact_events` (2,669,096 rows, grain = one event) + 6 conformed
+dimensions, built in Athena (`sql/10_star_schema.sql`), FK integrity verified
+(0 orphan keys). Power BI semantic model sits on top: relationships + DAX
+measures (`docs/powerbi_semantic_layer.md`).
+
+![star_schema.png](images/star_schema.png)
+
+Original draft model:
 ![model.png](images/model.png)
 
 ## Sample charts

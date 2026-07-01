@@ -1,0 +1,18 @@
+# Lokalny Airflow do orkiestracji ACLED ETL (demo/obrona).
+# Start:    docker compose up -d
+# Hasło:    docker compose exec airflow cat /opt/airflow/standalone_admin_password.txt
+# UI:       http://localhost:8080  (user: admin)
+# ponytail: standalone + SQLite starczy na demo; CeleryExecutor gdy będzie potrzebna skala
+services:
+  airflow:
+    image: apache/airflow:2.10.4
+    command: standalone
+    ports:
+      - "8080:8080"
+    environment:
+      AWS_DEFAULT_REGION: eu-central-1
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DEFAULT_TIMEZONE: Europe/Warsaw
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ~/.aws:/home/airflow/.aws:ro   # kredki AWS z hosta (read-only)

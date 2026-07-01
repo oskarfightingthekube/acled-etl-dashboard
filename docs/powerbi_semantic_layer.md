@@ -17,17 +17,19 @@ Power BI (model semantyczny + raport)`. To wariant dozwolonego stacku
 „Airflow → Redshift/BigQuery → SQL/Views → Power BI" z dokumentu ARCHITEKTURA.
 
 ## 1. Import (płaski) + model gwiazdy
-Pobierz dane → ODBC (DSN `ACLED_Athena`) → zaimportuj **tylko** tabele gwiazdy:
-`fact_events`, `dim_country`, `dim_date`, `dim_event_type`, `dim_actor`,
-`dim_source` (opcjonalnie `dim_population`). Import, nie DirectQuery.
+Pobierz dane → ODBC (DSN `ACLED_Athena`) → zaimportuj **tylko** tabele gwiazdy
+(7): `fact_events`, `dim_country`, `dim_date`, `dim_event_type`, `dim_actor`,
+`dim_source`, `dim_population_year`. Import, nie DirectQuery.
 
 Relacje (Widok modelu), wszystkie **wiele-do-jednego (\*:1)**, filtr pojedynczy,
-wymiar po stronie 1:
+wymiar po stronie 1 (zweryfikowane: każdy klucz wymiaru unikalny, także
+case-insensitive — Power BI ignoruje wielkość liter w kluczach tekstowych):
 - `fact_events[iso]` → `dim_country[iso]`
 - `fact_events[event_date]` → `dim_date[date_key]`
 - `fact_events[sub_event_type]` → `dim_event_type[sub_event_type]`
 - `fact_events[actor1]` → `dim_actor[actor]`
 - `fact_events[source_scale]` → `dim_source[source_scale]`
+- `fact_events[iso_year]` → `dim_population_year[iso_year]`
 
 Ukryj klucze techniczne (prawy klik kolumny → Ukryj w widoku raportu).
 Oznacz `dim_date` jako tabelę dat: zaznacz `dim_date` → Narzędzia tabeli →
@@ -69,14 +71,17 @@ Format: `Pct Civilian Targeting`, `YoY Events %` → procent; `Fatalities per
 Event` → liczba 2 miejsca; reszta liczby całkowite (Narzędzia miary → Format).
 
 ### Per capita (Q12)
-Najprościej: użyj gotowej tabeli `gold_per_capita` (kolumny `events_per_100k`,
-`fatalities_per_100k`) jako osobnej tabeli raportowej. Podejście czysto
-semantyczne: dołóż `dim_population`, w `fact_events` i w `dim_population` kolumnę
-klucza `iso_year = iso*10000 + year`, relacja \*:1, i:
+Obsłużone w gwieździe: `fact_events[iso_year]` → `dim_population_year[iso_year]`
+(klucz złożony (iso, rok) spłaszczony do jednej kolumny, bo relacje PBI są
+1-kolumnowe). Miary:
 ```DAX
-Population = SUM(dim_population[population])
+Population = SUM(dim_population_year[population])
 Events per 100k = DIVIDE([Total Events] * 100000, [Population])
+Fatalities per 100k = DIVIDE([Total Fatalities] * 100000, [Population])
 ```
+Uwaga: ~0,4% zdarzeń (Kosowo itp.) nie ma populacji → per-capita puste dla nich;
+totale zdarzeń nie tracą nic. Zweryfikowane krzyżowo z `gold_per_capita` —
+identyczne wyniki (2024: Palestyna 400,9 / Liban 251,8 / Ukraina 147,9 na 100k).
 
 ## 4. Raport — 1 strona = 1 pytanie (mapa na 12 pytań)
 Wszystko na JEDNYM modelu (measures + slicery + drill-down). Wzorzec ze skryptu:
