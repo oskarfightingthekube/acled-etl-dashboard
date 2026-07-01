@@ -1,0 +1,81 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/1.0.0/schema.json",
+  "name": "0860c691863650b48790",
+  "position": {
+    "x": 24,
+    "y": 24,
+    "z": 0,
+    "width": 612,
+    "height": 672,
+    "tabOrder": 0
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "gold_per_capita"
+                    }
+                  },
+                  "Property": "country"
+                }
+              },
+              "queryRef": "gold_per_capita.country",
+              "nativeQueryRef": "country"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "gold_per_capita"
+                    }
+                  },
+                  "Property": "events_per_100k"
+                }
+              },
+              "queryRef": "gold_per_capita.events_per_100k",
+              "nativeQueryRef": "events_per_100k"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "gold_per_capita"
+                    }
+                  },
+                  "Property": "fatalities_per_100k"
+                }
+              },
+              "queryRef": "gold_per_capita.fatalities_per_100k",
+              "nativeQueryRef": "fatalities_per_100k"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Events & fatalities per 100k'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

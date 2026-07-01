@@ -1,0 +1,59 @@
+table gold_event_type_year
+	lineageTag: 57536979-5307-5342-8ddb-1cb6466b1ae8
+
+	column event_type
+		dataType: string
+		lineageTag: 61bc9bfa-16f3-5e81-a5bc-813ec676f0e7
+		summarizeBy: none
+		sourceColumn: event_type
+
+		annotation SummarizationSetBy = Automatic
+
+	column disorder_type
+		dataType: string
+		lineageTag: ac099dfa-f5d0-5ba3-92a6-cd375da65465
+		summarizeBy: none
+		sourceColumn: disorder_type
+
+		annotation SummarizationSetBy = Automatic
+
+	column year
+		dataType: int64
+		formatString: 0
+		lineageTag: 0ec2af5c-cbbf-583b-abb1-bfc33da979a9
+		summarizeBy: none
+		sourceColumn: year
+
+		annotation SummarizationSetBy = Automatic
+
+	column event_count
+		dataType: int64
+		formatString: #,0
+		lineageTag: 0a5c43ab-7f4c-572d-941b-1f410097e918
+		summarizeBy: sum
+		sourceColumn: event_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column total_fatalities
+		dataType: int64
+		formatString: #,0
+		lineageTag: f353f15e-fe30-5c89-8a12-819edddd762e
+		summarizeBy: sum
+		sourceColumn: total_fatalities
+
+		annotation SummarizationSetBy = Automatic
+
+	partition gold_event_type_year = m
+		mode: import
+		source =
+				let
+				    Source = AmazonAthena.Databases("ACLED_Athena", null, []),
+				    AwsDataCatalog = Source{[Name="AwsDataCatalog",Kind="Database"]}[Data],
+				    acled_dev = AwsDataCatalog{[Name="acled_dev",Kind="Schema"]}[Data],
+				    gold_event_type_year = acled_dev{[Name="gold_event_type_year",Kind="Table"]}[Data]
+				in
+				    gold_event_type_year
+
+	annotation PBI_ResultType = Table
+

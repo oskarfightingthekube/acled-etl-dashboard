@@ -1,0 +1,19 @@
+model Model
+	culture: en-US
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	sourceQueryCulture: en-US
+
+annotation PBI_QueryOrder = ["gold_geography", "gold_yearly_trends", "gold_event_types", "gold_event_type_year", "gold_actors", "gold_interaction", "gold_civilian_region", "gold_sources", "gold_country_year", "gold_per_capita"]
+
+ref table gold_geography
+ref table gold_yearly_trends
+ref table gold_event_types
+ref table gold_event_type_year
+ref table gold_actors
+ref table gold_interaction
+ref table gold_civilian_region
+ref table gold_sources
+ref table gold_country_year
+ref table gold_per_capita
+
+ref cultureInfo en-US

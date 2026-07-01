@@ -1,0 +1,45 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/report/3.3.0/schema.json",
+  "themeCollection": {
+    "baseTheme": {
+      "name": "CY24SU10",
+      "type": "SharedResources"
+    },
+    "customTheme": {
+      "name": "ACLED_Editorial.json",
+      "type": "RegisteredResources"
+    }
+  },
+  "resourcePackages": [
+    {
+      "resourcePackage": {
+        "name": "SharedResources",
+        "type": "SharedResources",
+        "items": []
+      }
+    },
+    {
+      "resourcePackage": {
+        "name": "RegisteredResources",
+        "type": "RegisteredResources",
+        "items": [
+          {
+            "name": "ACLED_Editorial.json",
+            "path": "ACLED_Editorial.json",
+            "type": "Image"
+          }
+        ]
+      }
+    }
+  ],
+  "settings": {
+    "useStylableVisualContainerHeader": true,
+    "defaultDrillFilterOtherVisuals": true
+  },
+  "annotations": [
+    {
+      "name": "defaultPage",
+      "value": "7c1b9111ee0b59339287"
+    }
+  ]
+}

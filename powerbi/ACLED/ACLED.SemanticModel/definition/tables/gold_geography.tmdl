@@ -1,0 +1,67 @@
+table gold_geography
+	lineageTag: 4c0640b5-8c8b-52b2-96d5-2bb27240107d
+
+	column country
+		dataType: string
+		lineageTag: 4e104163-e4ec-5660-a2a7-e1b7ce327b96
+		summarizeBy: none
+		sourceColumn: country
+
+		annotation SummarizationSetBy = Automatic
+
+	column region
+		dataType: string
+		lineageTag: c37bc175-ede1-55f1-a279-8fefe0b2efe9
+		summarizeBy: none
+		sourceColumn: region
+
+		annotation SummarizationSetBy = Automatic
+
+	column event_type
+		dataType: string
+		lineageTag: be0c48d0-246f-5430-b5d2-4d27b660602c
+		summarizeBy: none
+		sourceColumn: event_type
+
+		annotation SummarizationSetBy = Automatic
+
+	column event_count
+		dataType: int64
+		formatString: #,0
+		lineageTag: 7915bad1-9f1d-5514-b513-2d6dfe8e5a9e
+		summarizeBy: sum
+		sourceColumn: event_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column total_fatalities
+		dataType: int64
+		formatString: #,0
+		lineageTag: 4ca1ad6f-dd01-563e-a21d-ae0b4d9164c1
+		summarizeBy: sum
+		sourceColumn: total_fatalities
+
+		annotation SummarizationSetBy = Automatic
+
+	column avg_fatalities
+		dataType: double
+		formatString: #,0.00
+		lineageTag: 7afb7c21-b576-5d20-8d78-da216db96ff5
+		summarizeBy: none
+		sourceColumn: avg_fatalities
+
+		annotation SummarizationSetBy = Automatic
+
+	partition gold_geography = m
+		mode: import
+		source =
+				let
+				    Source = AmazonAthena.Databases("ACLED_Athena", null, []),
+				    AwsDataCatalog = Source{[Name="AwsDataCatalog",Kind="Database"]}[Data],
+				    acled_dev = AwsDataCatalog{[Name="acled_dev",Kind="Schema"]}[Data],
+				    gold_geography = acled_dev{[Name="gold_geography",Kind="Table"]}[Data]
+				in
+				    gold_geography
+
+	annotation PBI_ResultType = Table
+

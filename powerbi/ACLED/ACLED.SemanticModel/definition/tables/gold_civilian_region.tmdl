@@ -1,0 +1,64 @@
+table gold_civilian_region
+	lineageTag: 0ae19489-7e3b-5424-92ca-b5093ad4f684
+
+	measure 'Pct Civilian Targeting' = DIVIDE(SUM(gold_civilian_region[civ_targeting_events]), SUM(gold_civilian_region[event_count]))
+		formatString: 0.0%
+		lineageTag: 12e5d6bc-d936-5367-ab0d-8b597a9f23e7
+
+	column region
+		dataType: string
+		lineageTag: 7b7711fb-695d-5005-a1e9-5d3050cb118a
+		summarizeBy: none
+		sourceColumn: region
+
+		annotation SummarizationSetBy = Automatic
+
+	column year
+		dataType: int64
+		formatString: 0
+		lineageTag: 80959ba8-c0b7-5f3c-9d4b-0a4798fdf982
+		summarizeBy: none
+		sourceColumn: year
+
+		annotation SummarizationSetBy = Automatic
+
+	column event_count
+		dataType: int64
+		formatString: #,0
+		lineageTag: b5267354-33c3-569d-b152-c71b4677db50
+		summarizeBy: sum
+		sourceColumn: event_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column civ_targeting_events
+		dataType: int64
+		formatString: #,0
+		lineageTag: 7afa5a0c-5bcf-5ec4-bf97-d02e0064abee
+		summarizeBy: sum
+		sourceColumn: civ_targeting_events
+
+		annotation SummarizationSetBy = Automatic
+
+	column total_fatalities
+		dataType: int64
+		formatString: #,0
+		lineageTag: 7e3ae59c-c083-5755-828e-b4595b7db2ea
+		summarizeBy: sum
+		sourceColumn: total_fatalities
+
+		annotation SummarizationSetBy = Automatic
+
+	partition gold_civilian_region = m
+		mode: import
+		source =
+				let
+				    Source = AmazonAthena.Databases("ACLED_Athena", null, []),
+				    AwsDataCatalog = Source{[Name="AwsDataCatalog",Kind="Database"]}[Data],
+				    acled_dev = AwsDataCatalog{[Name="acled_dev",Kind="Schema"]}[Data],
+				    gold_civilian_region = acled_dev{[Name="gold_civilian_region",Kind="Table"]}[Data]
+				in
+				    gold_civilian_region
+
+	annotation PBI_ResultType = Table
+

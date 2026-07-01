@@ -1,0 +1,60 @@
+table gold_yearly_trends
+	lineageTag: a31704ab-c803-5f55-99dc-53fdd20ef27b
+
+	column year
+		dataType: int64
+		formatString: 0
+		lineageTag: ab62e570-7ed4-5245-af25-71a59cb90530
+		summarizeBy: none
+		sourceColumn: year
+
+		annotation SummarizationSetBy = Automatic
+
+	column month
+		dataType: int64
+		formatString: 0
+		lineageTag: 9a111cb4-f89b-5361-857a-8895504365b7
+		summarizeBy: none
+		sourceColumn: month
+
+		annotation SummarizationSetBy = Automatic
+
+	column disorder_type
+		dataType: string
+		lineageTag: 6608a83f-5604-5d07-9456-7d33ab181173
+		summarizeBy: none
+		sourceColumn: disorder_type
+
+		annotation SummarizationSetBy = Automatic
+
+	column event_count
+		dataType: int64
+		formatString: #,0
+		lineageTag: a53158bf-cb78-507f-b78e-0bec5b6ac406
+		summarizeBy: sum
+		sourceColumn: event_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column total_fatalities
+		dataType: int64
+		formatString: #,0
+		lineageTag: 49939795-a284-5af8-a407-22ea76114b3b
+		summarizeBy: sum
+		sourceColumn: total_fatalities
+
+		annotation SummarizationSetBy = Automatic
+
+	partition gold_yearly_trends = m
+		mode: import
+		source =
+				let
+				    Source = AmazonAthena.Databases("ACLED_Athena", null, []),
+				    AwsDataCatalog = Source{[Name="AwsDataCatalog",Kind="Database"]}[Data],
+				    acled_dev = AwsDataCatalog{[Name="acled_dev",Kind="Schema"]}[Data],
+				    gold_yearly_trends = acled_dev{[Name="gold_yearly_trends",Kind="Table"]}[Data]
+				in
+				    gold_yearly_trends
+
+	annotation PBI_ResultType = Table
+

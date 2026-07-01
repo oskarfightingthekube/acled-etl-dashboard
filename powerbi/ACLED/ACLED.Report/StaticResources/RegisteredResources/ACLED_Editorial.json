@@ -1,0 +1,70 @@
+{
+  "name": "ACLED Editorial",
+  "dataColors": [
+    "#1F6F8B",
+    "#E08E45",
+    "#6A8D73",
+    "#B5446E",
+    "#4A4E69",
+    "#C9A227",
+    "#A50F15",
+    "#7A7A88"
+  ],
+  "background": "#F7F7F5",
+  "foreground": "#1A1A2E",
+  "tableAccent": "#1F6F8B",
+  "good": "#6A8D73",
+  "neutral": "#C9A227",
+  "bad": "#A50F15",
+  "maximum": "#A50F15",
+  "center": "#FB6A4A",
+  "minimum": "#FEE5D9",
+  "visualStyles": {
+    "*": {
+      "*": {
+        "title": [
+          {
+            "fontColor": {
+              "solid": {
+                "color": "#1A1A2E"
+              }
+            },
+            "fontSize": 16,
+            "fontFamily": "Segoe UI Semibold"
+          }
+        ],
+        "legend": [
+          {
+            "fontSize": 14,
+            "fontFamily": "Segoe UI",
+            "labelColor": {
+              "solid": {
+                "color": "#1A1A2E"
+              }
+            }
+          }
+        ],
+        "labels": [
+          {
+            "fontSize": 12,
+            "color": {
+              "solid": {
+                "color": "#1A1A2E"
+              }
+            }
+          }
+        ],
+        "background": [
+          {
+            "color": {
+              "solid": {
+                "color": "#FFFFFF"
+              }
+            },
+            "transparency": 0
+          }
+        ]
+      }
+    }
+  }
+}

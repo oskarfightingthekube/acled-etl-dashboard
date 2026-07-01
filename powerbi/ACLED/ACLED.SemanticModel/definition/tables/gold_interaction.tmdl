@@ -1,0 +1,55 @@
+table gold_interaction
+	lineageTag: e2e36441-c29e-5532-8f55-5585e57ee62f
+
+	measure 'Fatalities per Event' = DIVIDE(SUM(gold_interaction[total_fatalities]), SUM(gold_interaction[event_count]))
+		formatString: 0.00
+		lineageTag: 8f1f951f-cc7d-595b-9474-41e3e92b4ce1
+
+	column interaction
+		dataType: string
+		lineageTag: 382d3474-cad5-5ae1-b783-b2d71c6a9a9a
+		summarizeBy: none
+		sourceColumn: interaction
+
+		annotation SummarizationSetBy = Automatic
+
+	column year
+		dataType: int64
+		formatString: 0
+		lineageTag: 811755ec-69bd-5773-abbe-547d56c96ba6
+		summarizeBy: none
+		sourceColumn: year
+
+		annotation SummarizationSetBy = Automatic
+
+	column event_count
+		dataType: int64
+		formatString: #,0
+		lineageTag: 01b4d5b6-efcb-5166-835d-549992827f27
+		summarizeBy: sum
+		sourceColumn: event_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column total_fatalities
+		dataType: int64
+		formatString: #,0
+		lineageTag: beef6e26-a4a9-5ef1-9233-a3c118d223f5
+		summarizeBy: sum
+		sourceColumn: total_fatalities
+
+		annotation SummarizationSetBy = Automatic
+
+	partition gold_interaction = m
+		mode: import
+		source =
+				let
+				    Source = AmazonAthena.Databases("ACLED_Athena", null, []),
+				    AwsDataCatalog = Source{[Name="AwsDataCatalog",Kind="Database"]}[Data],
+				    acled_dev = AwsDataCatalog{[Name="acled_dev",Kind="Schema"]}[Data],
+				    gold_interaction = acled_dev{[Name="gold_interaction",Kind="Table"]}[Data]
+				in
+				    gold_interaction
+
+	annotation PBI_ResultType = Table
+
