@@ -1,0 +1,15 @@
+[ODBC]
+; File DSN for Amazon Athena — ACLED gold layer.
+; 1. Install the Amazon Athena ODBC driver (v2, 64-bit).
+; 2. Put your NEW rotated access key/secret in UID/PWD below (never the leaked one).
+; 3. Match DRIVER to the exact name under ODBC Administrator > Drivers tab.
+; In Power BI: Get Data > ODBC > choose this File DSN, or paste UID/PWD when prompted.
+DRIVER=Amazon Athena ODBC (x64)
+AuthenticationType=IAM Credentials
+AwsRegion=eu-central-1
+Catalog=AwsDataCatalog
+Schema=acled_dev
+Workgroup=primary
+S3OutputLocation=s3://mw-acled-gold-dev/athena-results/
+UID=<NEW_ACCESS_KEY_ID>
+PWD=<NEW_SECRET_ACCESS_KEY>

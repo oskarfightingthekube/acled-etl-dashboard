@@ -1,0 +1,24 @@
+relationship 5b5cf09c-23c2-52a1-a41b-46c7770e5d15
+	fromColumn: fact_events.iso
+	toColumn: dim_country.iso
+
+relationship d61b75c0-ddf8-5ba2-b2cd-a504f97ba0c5
+	fromColumn: fact_events.event_date
+	toColumn: dim_date.date_key
+
+relationship d42f8103-230f-573e-95fc-023920100ab1
+	fromColumn: fact_events.sub_event_type
+	toColumn: dim_event_type.sub_event_type
+
+relationship 493b0644-9e17-55b2-a644-eafd8317a36a
+	fromColumn: fact_events.actor1
+	toColumn: dim_actor.actor
+
+relationship 90bd0077-f626-558c-8a6b-55a6a7566324
+	fromColumn: fact_events.source_scale
+	toColumn: dim_source.source_scale
+
+relationship ff15fab7-8578-5075-a59e-80696d57b4d4
+	fromColumn: fact_events.iso_year
+	toColumn: dim_population_year.iso_year
+

@@ -1,0 +1,21 @@
+table dim_source
+	lineageTag: b91c5c0d-3428-5f28-ba36-e4beeb824877
+
+	column source_scale
+		dataType: string
+		lineageTag: d0e08a6d-d9b3-5caf-9d7a-2f7c2967f170
+		summarizeBy: none
+		sourceColumn: source_scale
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_source = m
+		mode: import
+		source =
+				let
+				    Source = Odbc.Query("dsn=ACLED_Athena", "SELECT * FROM acled_dev.dim_source")
+				in
+				    Source
+
+	annotation PBI_ResultType = Table
+

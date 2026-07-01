@@ -21,9 +21,9 @@ python3 powerbi/generate_pbip.py
 
 ## Wire the Athena connection
 
-The model imports from Athena via the **Amazon Athena** connector, using an
-**ODBC DSN** named `ACLED_Athena` (see the `partition ... source` M in each
-`ACLED.SemanticModel/definition/tables/*.tmdl`).
+The model imports from Athena via the **Amazon Athena** connector, using the
+**ODBC DSN** named `ACLED_Athena` via `Odbc.Query` (see `partition` in each
+`.tmdl`) — the exact path already authenticated on the team's machine.
 
 1. Install the **Amazon Athena ODBC driver**.
 2. ODBC Data Source Administrator ▸ add a DSN named `ACLED_Athena` with:
@@ -36,11 +36,12 @@ Catalog path in the M: `AwsDataCatalog` ▸ `acled_dev` ▸ table.
 
 ## What's inside
 
-- **Model** (`ACLED.SemanticModel`): the 10 gold tables (typed columns,
-  import partitions) + 2 demo DAX measures (`Pct Civilian Targeting`,
-  `Fatalities per Event`). Other visuals use implicit `Sum` or the precomputed
-  gold columns (`avg_fatalities`, `events_per_100k`, …). No relationships —
-  each visual reads one table, matching the per-question gold rollups.
+- **Model** (`ACLED.SemanticModel`) — KOMPLETNA warstwa semantyczna na
+  schemacie gwiazdy: 7 tabel (fact_events + 6 wymiarów), 6 relacji *:1,
+  15 miar DAX (folder "Miary", format stringi), 3 hierarchie (Kalendarz,
+  Geografia, Typ zdarzenia), chronologiczny sort miesięcy, ukryte klucze
+  techniczne, dim_date oznaczona jako tabela dat. Źródło: Odbc.Query po DSN
+  `ACLED_Athena` (ta sama ścieżka co ręczne połączenie), tryb Import.
 - **Report** (`ACLED.Report`): 7 pages (Geography & Deaths, Trends, Event Types,
   Actors, Civilian Targeting, Sources & Escalation, Per Capita), 2 visuals each,
   bound to the model. Palette applied via the registered `ACLED_Editorial.json`

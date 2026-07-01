@@ -1,0 +1,60 @@
+table dim_population_year
+	lineageTag: fdd9043c-9170-5ef5-b757-dac5c999496e
+
+	column iso_year
+		dataType: int64
+		formatString: 0
+		isHidden
+		lineageTag: 8318839a-79ac-5c3b-bc47-efc9973a90cf
+		summarizeBy: none
+		sourceColumn: iso_year
+
+		annotation SummarizationSetBy = Automatic
+
+	column iso
+		dataType: int64
+		formatString: 0
+		isHidden
+		lineageTag: fcb7a481-14b3-55e1-8132-69399db0f92e
+		summarizeBy: none
+		sourceColumn: iso
+
+		annotation SummarizationSetBy = Automatic
+
+	column year
+		dataType: int64
+		formatString: 0
+		isHidden
+		lineageTag: 908966a7-34b3-5956-847e-d91e4e3ca17e
+		summarizeBy: none
+		sourceColumn: year
+
+		annotation SummarizationSetBy = Automatic
+
+	column country_name
+		dataType: string
+		lineageTag: ea512892-ac5e-554f-8dea-0c88ee0d35ab
+		summarizeBy: none
+		sourceColumn: country_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column population
+		dataType: int64
+		formatString: #,0
+		lineageTag: 6153942a-9f82-5e46-9657-8ba8a2717dff
+		summarizeBy: sum
+		sourceColumn: population
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_population_year = m
+		mode: import
+		source =
+				let
+				    Source = Odbc.Query("dsn=ACLED_Athena", "SELECT * FROM acled_dev.dim_population_year")
+				in
+				    Source
+
+	annotation PBI_ResultType = Table
+

@@ -1,0 +1,50 @@
+table dim_country
+	lineageTag: 81217dd6-a743-5429-903e-b438dc27cbb5
+
+	column iso
+		dataType: int64
+		formatString: 0
+		isHidden
+		lineageTag: b5079071-6508-5a90-931c-e7043d5f7e90
+		summarizeBy: none
+		sourceColumn: iso
+
+		annotation SummarizationSetBy = Automatic
+
+	column country
+		dataType: string
+		lineageTag: a1e692d4-ff32-5ffc-9f2d-235522500295
+		summarizeBy: none
+		sourceColumn: country
+
+		annotation SummarizationSetBy = Automatic
+
+	column region
+		dataType: string
+		lineageTag: 641e1d15-8780-5c3a-aef1-1dd997f8207d
+		summarizeBy: none
+		sourceColumn: region
+
+		annotation SummarizationSetBy = Automatic
+
+	hierarchy 'Geografia'
+		lineageTag: 375ab262-7074-55cc-bf12-22b56260fb38
+
+		level 'Region'
+			lineageTag: 4e4cbaa6-a803-54fd-9a89-29229e92ffb9
+			column: region
+
+		level 'Kraj'
+			lineageTag: 6bfb0556-bc8c-55af-8987-1b4f93a03bd6
+			column: country
+
+	partition dim_country = m
+		mode: import
+		source =
+				let
+				    Source = Odbc.Query("dsn=ACLED_Athena", "SELECT * FROM acled_dev.dim_country")
+				in
+				    Source
+
+	annotation PBI_ResultType = Table
+
