@@ -25,4 +25,5 @@ relationship 4955f54a-7cf3-5713-83bc-dfe69c933c88
 relationship ff15fab7-8578-5075-a59e-80696d57b4d4
 	fromColumn: fact_events.iso_year
 	toColumn: dim_population_year.iso_year
+	crossFilteringBehavior: bothDirections
 

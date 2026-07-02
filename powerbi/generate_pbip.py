@@ -267,7 +267,12 @@ def tmdl_relationships():
     for frm, to in RELATIONSHIPS:
         L += [f"relationship {gid('r',frm,to)}",
               f"\tfromColumn: {frm}",
-              f"\ttoColumn: {to}", ""]
+              f"\ttoColumn: {to}"]
+        if "population" in to:
+            # populacja: filtr kraju/roku musi przeplywac przez fakt do wymiaru,
+            # inaczej [Population] = suma swiatowa i per-100k jest bez sensu
+            L.append("\tcrossFilteringBehavior: bothDirections")
+        L.append("")
     return "\n".join(L) + "\n"
 
 # ---------------------------------------------------------------- BUILD -------

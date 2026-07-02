@@ -34,6 +34,11 @@ case-insensitive — Power BI ignoruje wielkość liter w kluczach tekstowych):
 
 (Klucze sztuczne `id_*` — po imporcie ukryj je w widoku raportu.)
 
+**⚠️ WAŻNE — relacja populacji:** edytuj relację
+`fact_events ↔ dim_population_year` → **Cross-filter direction: Both**.
+Bez tego `[Population]` ignoruje filtr kraju/roku (zwraca sumę światową)
+i wszystkie miary per-100k są błędne. Pozostałe 6 relacji zostaje Single.
+
 Ukryj klucze techniczne (prawy klik kolumny → Ukryj w widoku raportu).
 Oznacz `dim_date` jako tabelę dat: zaznacz `dim_date` → Narzędzia tabeli →
 Oznacz jako tabelę dat → kolumna `date_key` (włącza funkcje czasu / YoY).
