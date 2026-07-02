@@ -1,33 +1,34 @@
 -- =============================================================================
--- 06_gold_conflict.sql — extended gold layer for business questions 6–11
---   (actors, interaction, civilian targeting, sources, escalation) + a clean
---   event-level fact table that also enables a point/admin1 map for Q2 and the
---   protest-vs-violence-over-time answer for Q5.
+-- 06_gold_conflict.sql — warstwa gold: szeroki fakt + rollupy per-pytanie
 -- =============================================================================
--- WHY THIS EXISTS (read before editing):
---   The 3 original gold tables (02–04) only cover Q1–5. The columns needed for
---   Q6–11 (actor1, interaction, civilian_targeting, source_scale, lat/long)
---   live in the raw `events` table but were NOT surfaced by the silver layer:
---     * silver_events' Athena DDL declares only 8 columns, and
---     * glue/silver_transform.py CASTs `interaction`/`inter1`/`inter2` to INT —
---       but in this dataset they are STRING labels ("State forces-Rebel group"),
---       so the cast yields NULL. silver's interaction is therefore unusable.
---   So this file rebuilds a clean fact table straight from `events`, applying
---   the SAME dedup + delete logic as silver (validated: identical 2,669,096
---   row count), and fixes two raw-data problems Athena's CSV SerDe leaves behind:
---     1. literal double-quotes wrapping most string values  -> trim(replace(x,'"',''))
---     2. civilian_targeting stored as '"Civilian targeting"' -> flag via replace()
---   All tables VERIFIED in acled_dev (eu-central-1): every rollup's
---   SUM(event_count) = 2,669,096, matching the original gold layer.
---
--- KNOWN MINOR ARTIFACT: a handful of misaligned source rows carry a bad value
---   in `fatalities`, producing tiny negative sums for a few actors (net ~-20
---   over 79k events). Negligible vs real totals; clamp with GREATEST(x,0) if a
---   stakeholder objects.
---
--- Run order: this whole file (fact table first, then the six rollups).
--- Output location for Athena results: s3://mw-acled-gold-dev/athena-results/
+-- ŹRÓDŁA I ROOT CAUSE (ważne, przeczytaj przed edycją):
+--   * SILVER (parquet pisany Sparkiem) ma POPRAWNE fatalities (2 346 465) i
+--     czyste stringi — ale glue/silver_transform.py castuje interaction/inter1/
+--     inter2 do INT, a to etykiety tekstowe -> NULL w plikach silvera.
+--   * BRONZE czytany przez Athena (LazySimpleSerDe) ma interaction jako string,
+--     ale cudzysłowy z CSV psują kolumny LICZBOWE: BIGINT nie parsuje '"12"'
+--     -> fatalities NULL w ~93% wierszy (suma 324 225 zamiast 2 346 465!).
+--   * Oryginalny DDL silver_events deklaruje tylko 8 kolumn — dane w plikach
+--     są kompletne, brakowało deklaracji. Stąd silver_events_full poniżej.
+-- HYBRYDA: wszystko z silvera + interaction dosztukowany z bronze po
+-- event_id_cnty (dedup latest-timestamp-wins jak w Glue jobie).
+-- INWARIANT (weryfikowany po każdej przebudowie): count = 2 669 096,
+-- sum(fatalities) = 2 346 465 w każdej tabeli tej warstwy.
+-- Docelowy fix (po deadline): usunąć INT-casty w silver_transform.py,
+-- re-run Glue, czytać wyłącznie z silvera.
 -- =============================================================================
+
+-- pełna deklaracja nad istniejącym parquetem silvera (dane już tam są)
+CREATE EXTERNAL TABLE acled_dev.silver_events_full (
+    event_id_cnty string, event_date date, year int, time_precision int,
+    disorder_type string, event_type string, sub_event_type string,
+    actor1 string, assoc_actor_1 string, inter1 int,
+    actor2 string, assoc_actor_2 string, inter2 int, interaction int,
+    civilian_targeting string, iso int, region string, country string,
+    admin1 string, admin2 string, admin3 string, location string,
+    latitude double, longitude double, geo_precision int,
+    source string, source_scale string, notes string, fatalities int, tags string
+) STORED AS PARQUET LOCATION 's3://mw-acled-silver-dev/events/';
 
 
 -- -----------------------------------------------------------------------------
@@ -39,38 +40,27 @@
 CREATE TABLE acled_dev.gold_events_wide
 WITH (format = 'PARQUET', external_location = 's3://mw-acled-gold-dev/events_wide/')
 AS
-WITH deduped AS (
-    SELECT *,
-           row_number() OVER (PARTITION BY event_id_cnty ORDER BY timestamp DESC) rn
-    FROM acled_dev.events
-),
-clean AS (
-    SELECT d.* FROM deduped d
-    LEFT JOIN (SELECT DISTINCT event_id_cnty FROM acled_dev.deletes) del
-        ON d.event_id_cnty = del.event_id_cnty
-    WHERE d.rn = 1 AND del.event_id_cnty IS NULL
+WITH bronze_interaction AS (
+    -- interaction istnieje tylko w bronze jako string; dedup identyczny jak w Glue
+    SELECT event_id_cnty, trim(replace(interaction, '"', '')) AS interaction
+    FROM (SELECT event_id_cnty, interaction,
+                 row_number() OVER (PARTITION BY event_id_cnty ORDER BY timestamp DESC) rn
+          FROM acled_dev.events)
+    WHERE rn = 1
 )
 SELECT
-    event_id_cnty,
-    CAST(event_date AS date)                         AS event_date,
-    CAST(year AS int)                                AS year,
-    trim(replace(country,        '"', ''))           AS country,
-    trim(replace(region,         '"', ''))           AS region,
-    trim(replace(admin1,         '"', ''))           AS admin1,
-    trim(replace(event_type,     '"', ''))           AS event_type,
-    trim(replace(sub_event_type, '"', ''))           AS sub_event_type,
-    trim(replace(disorder_type,  '"', ''))           AS disorder_type,
-    trim(replace(actor1,         '"', ''))           AS actor1,
-    trim(replace(actor2,         '"', ''))           AS actor2,
-    trim(replace(interaction,    '"', ''))           AS interaction,
-    CASE WHEN replace(civilian_targeting, '"', '') = 'Civilian targeting'
-         THEN 1 ELSE 0 END                           AS civilian_targeting_flag,
-    latitude,
-    longitude,
-    CAST(iso AS int)                                 AS iso,
-    trim(replace(source_scale,   '"', ''))           AS source_scale,
-    CAST(fatalities AS int)                          AS fatalities
-FROM clean;
+    s.event_id_cnty,
+    s.event_date, s.year,
+    s.country, s.region, s.admin1,
+    s.event_type, s.sub_event_type, s.disorder_type,
+    s.actor1, s.actor2,
+    b.interaction,
+    CASE WHEN s.civilian_targeting = 'Civilian targeting' THEN 1 ELSE 0 END
+        AS civilian_targeting_flag,
+    s.latitude, s.longitude, s.iso, s.source_scale,
+    s.fatalities
+FROM acled_dev.silver_events_full s
+LEFT JOIN bronze_interaction b ON s.event_id_cnty = b.event_id_cnty;
 
 
 -- -----------------------------------------------------------------------------

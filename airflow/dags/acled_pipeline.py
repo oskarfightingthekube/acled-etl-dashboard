@@ -1,4 +1,4 @@
-"""ACLED ETL — bronze -> (Glue silver) -> gold_events_wide -> schemat gwiazdy.
+"""ACLED ETL — bronze -> (Glue silver) -> gold_events_wide -> czysty schemat gwiazdy.
 
 Idempotentny: przed każdym CTAS robi DROP TABLE IF EXISTS + czyści prefix S3,
 więc DAG można odpalać wielokrotnie (bare CREATE TABLE padłby przy 2. runie).
@@ -6,12 +6,16 @@ więc DAG można odpalać wielokrotnie (bare CREATE TABLE padłby przy 2. runie)
 SQL trzymany inline — TRZYMAĆ W SYNCU z sql/06_gold_conflict.sql i
 sql/10_star_schema.sql (źródło prawdy = pliki sql/).
 
-Gałąź Glue (crawler + silver job) jest opt-in (param run_glue), bo wymaga
-uprawnień glue:* których demo-user może nie mieć. Ścieżka Athena-only działa
-z samymi uprawnieniami Athena+S3+Glue-Data-Catalog.
+Źródła (root cause udokumentowany w sql/06): silver ma poprawne fatalities
+i czyste stringi, bronze-przez-Athena ma interaction; gold_events_wide = hybryda.
+Inwariant po każdym runie: 2 669 096 zdarzeń, 2 346 465 fatalities.
 
-UWAGA: dim_population (źródłowy TSV World Bank) to jednorazowy setup
-(sql/07) — celowo NIE ma go w DAG-u, żeby nic nie czyściło jego S3.
+Gałąź Glue (crawler + silver job) jest opt-in (param run_glue), bo wymaga
+uprawnień glue:*. Ścieżka Athena-only działa z Athena+S3+Glue-Data-Catalog.
+
+UWAGA: dim_population (źródłowy TSV World Bank) i silver_events_full (DDL nad
+istniejącym parquetem) to jednorazowy setup (sql/07, sql/06) — celowo POZA
+DAG-iem, żeby nic nie czyściło ich danych.
 """
 from __future__ import annotations
 
@@ -63,81 +67,97 @@ def _rebuild(table: str, prefix: str, ctas_body: str) -> None:
 
 
 GOLD_EVENTS_WIDE = """
-WITH deduped AS (
-    SELECT *, row_number() OVER (PARTITION BY event_id_cnty ORDER BY timestamp DESC) rn
-    FROM acled_dev.events
-),
-clean AS (
-    SELECT d.* FROM deduped d
-    LEFT JOIN (SELECT DISTINCT event_id_cnty FROM acled_dev.deletes) del
-        ON d.event_id_cnty = del.event_id_cnty
-    WHERE d.rn = 1 AND del.event_id_cnty IS NULL
+WITH bronze_interaction AS (
+    SELECT event_id_cnty, trim(replace(interaction, '"', '')) AS interaction
+    FROM (SELECT event_id_cnty, interaction,
+                 row_number() OVER (PARTITION BY event_id_cnty ORDER BY timestamp DESC) rn
+          FROM acled_dev.events)
+    WHERE rn = 1
 )
 SELECT
-    event_id_cnty,
-    CAST(event_date AS date)               AS event_date,
-    CAST(year AS int)                      AS year,
-    trim(replace(country, '"', ''))        AS country,
-    trim(replace(region, '"', ''))         AS region,
-    trim(replace(admin1, '"', ''))         AS admin1,
-    trim(replace(event_type, '"', ''))     AS event_type,
-    trim(replace(sub_event_type, '"', '')) AS sub_event_type,
-    trim(replace(disorder_type, '"', ''))  AS disorder_type,
-    trim(replace(actor1, '"', ''))         AS actor1,
-    trim(replace(actor2, '"', ''))         AS actor2,
-    trim(replace(interaction, '"', ''))    AS interaction,
-    CASE WHEN replace(civilian_targeting, '"', '') = 'Civilian targeting'
-         THEN 1 ELSE 0 END                 AS civilian_targeting_flag,
-    latitude, longitude,
-    CAST(iso AS int)                       AS iso,
-    trim(replace(source_scale, '"', ''))   AS source_scale,
-    CAST(fatalities AS int)                AS fatalities
-FROM clean
+    s.event_id_cnty, s.event_date, s.year,
+    s.country, s.region, s.admin1,
+    s.event_type, s.sub_event_type, s.disorder_type,
+    s.actor1, s.actor2,
+    b.interaction,
+    CASE WHEN s.civilian_targeting = 'Civilian targeting' THEN 1 ELSE 0 END
+        AS civilian_targeting_flag,
+    s.latitude, s.longitude, s.iso, s.source_scale,
+    s.fatalities
+FROM acled_dev.silver_events_full s
+LEFT JOIN bronze_interaction b ON s.event_id_cnty = b.event_id_cnty
 """
 
-STAR = {
+# wymiary z surogatami + wiersz Unknown (id = -1); patrz sql/10
+DIMS = {
     "dim_country": (
         "star/dim_country/",
-        "SELECT iso, arbitrary(country) country, arbitrary(region) region "
-        "FROM acled_dev.gold_events_wide WHERE iso IS NOT NULL GROUP BY iso",
+        "SELECT ROW_NUMBER() OVER (ORDER BY iso) id_country, iso, country, region "
+        "FROM (SELECT iso, arbitrary(country) country, arbitrary(region) region "
+        "FROM acled_dev.gold_events_wide WHERE iso IS NOT NULL GROUP BY iso) "
+        "UNION ALL SELECT -1, NULL, 'Unknown', 'Unknown'",
     ),
     "dim_event_type": (
         "star/dim_event_type/",
-        "SELECT sub_event_type, arbitrary(event_type) event_type, "
-        "arbitrary(disorder_type) disorder_type "
-        "FROM acled_dev.gold_events_wide WHERE sub_event_type IS NOT NULL "
-        "GROUP BY sub_event_type",
+        "SELECT ROW_NUMBER() OVER (ORDER BY sub_event_type) id_event_type, "
+        "sub_event_type, event_type, disorder_type "
+        "FROM (SELECT sub_event_type, arbitrary(event_type) event_type, "
+        "arbitrary(disorder_type) disorder_type FROM acled_dev.gold_events_wide "
+        "WHERE sub_event_type IS NOT NULL GROUP BY sub_event_type) "
+        "UNION ALL SELECT -1, 'Unknown', 'Unknown', 'Unknown'",
     ),
     "dim_actor": (
         "star/dim_actor/",
-        "SELECT DISTINCT actor1 AS actor FROM acled_dev.gold_events_wide "
-        "WHERE actor1 IS NOT NULL",
+        "SELECT ROW_NUMBER() OVER (ORDER BY actor) id_actor, actor "
+        "FROM (SELECT DISTINCT actor1 actor FROM acled_dev.gold_events_wide "
+        "WHERE actor1 IS NOT NULL) UNION ALL SELECT -1, 'Unknown'",
     ),
     "dim_source": (
         "star/dim_source/",
-        "SELECT DISTINCT source_scale FROM acled_dev.gold_events_wide "
-        "WHERE source_scale IS NOT NULL",
+        "SELECT ROW_NUMBER() OVER (ORDER BY source_scale) id_source, source_scale "
+        "FROM (SELECT DISTINCT source_scale FROM acled_dev.gold_events_wide "
+        "WHERE source_scale IS NOT NULL) UNION ALL SELECT -1, 'Unknown'",
+    ),
+    "dim_interaction": (
+        "star/dim_interaction/",
+        "SELECT ROW_NUMBER() OVER (ORDER BY interaction) id_interaction, interaction "
+        "FROM (SELECT DISTINCT interaction FROM acled_dev.gold_events_wide "
+        "WHERE interaction IS NOT NULL) UNION ALL SELECT -1, 'Unknown'",
     ),
     "dim_population_year": (
         "star/dim_population_year/",
         "SELECT iso_numeric*10000+year iso_year, iso_numeric iso, year, "
         "country_name, population FROM acled_dev.dim_population",
     ),
-    "fact_events": (
-        "star/fact_events/",
-        "SELECT event_id_cnty, iso, event_date, sub_event_type, actor1, "
-        "source_scale, CASE WHEN iso IS NOT NULL THEN iso*10000+year END iso_year, "
-        "interaction, civilian_targeting_flag, latitude, longitude, year, fatalities "
-        "FROM acled_dev.gold_events_wide",
-    ),
 }
 
 DIM_DATE = (
     "star/dim_date/",
-    "SELECT CAST(d AS date) date_key, year(d) year, month(d) month, "
-    "date_format(d,'%M') month_name, quarter(d) quarter "
+    "SELECT CAST(date_format(d,'%Y%m%d') AS int) id_date, CAST(d AS date) date_key, "
+    "year(d) year, quarter(d) quarter, month(d) month, date_format(d,'%M') month_name "
     "FROM UNNEST(sequence(date '1997-01-01', date '2025-12-31', interval '1' day)) AS t(d)",
 )
+
+# fakt: TYLKO klucze wymiarów + miary (Zasada 1 z wykładu); joinuje wymiary,
+# więc w DAG-u musi iść PO nich
+FACT_EVENTS = """
+SELECT
+    w.event_id_cnty,
+    COALESCE(c.id_country, -1) id_country,
+    CAST(date_format(w.event_date,'%Y%m%d') AS int) id_date,
+    COALESCE(e.id_event_type, -1) id_event_type,
+    COALESCE(a.id_actor, -1) id_actor,
+    COALESCE(s.id_source, -1) id_source,
+    COALESCE(i.id_interaction, -1) id_interaction,
+    CASE WHEN w.iso IS NOT NULL THEN w.iso*10000+w.year END iso_year,
+    w.fatalities, w.civilian_targeting_flag
+FROM acled_dev.gold_events_wide w
+LEFT JOIN acled_dev.dim_country c ON w.iso = c.iso
+LEFT JOIN acled_dev.dim_event_type e ON w.sub_event_type = e.sub_event_type
+LEFT JOIN acled_dev.dim_actor a ON w.actor1 = a.actor
+LEFT JOIN acled_dev.dim_source s ON w.source_scale = s.source_scale
+LEFT JOIN acled_dev.dim_interaction i ON w.interaction = i.interaction
+"""
 
 
 @dag(
@@ -192,18 +212,45 @@ def acled_pipeline():
     def dim_date():
         _rebuild("dim_date", *DIM_DATE)
 
-    def star_task(name):
+    def dim_task(name):
         @task(task_id=name)
         def _t():
-            prefix, body = STAR[name]
+            prefix, body = DIMS[name]
             _rebuild(name, prefix, body)
         return _t()
 
+    @task
+    def fact_events():
+        _rebuild("fact_events", "star/fact_events/", FACT_EVENTS)
+
+    @task
+    def validate():
+        """Inwariant: 2 669 096 zdarzeń i 2 346 465 fatalities w fakcie."""
+        c = boto3.client("athena", region_name=REGION)
+        qid = c.start_query_execution(
+            QueryString="SELECT count(*), sum(fatalities) FROM acled_dev.fact_events",
+            QueryExecutionContext={"Database": DB},
+            ResultConfiguration={"OutputLocation": ATHENA_OUT},
+            WorkGroup=WORKGROUP,
+        )["QueryExecutionId"]
+        while True:
+            st = c.get_query_execution(QueryExecutionId=qid)["QueryExecution"]["Status"]["State"]
+            if st in ("SUCCEEDED", "FAILED", "CANCELLED"):
+                break
+            time.sleep(2)
+        row = c.get_query_results(QueryExecutionId=qid)["ResultSet"]["Rows"][1]["Data"]
+        events, fatalities = int(row[0]["VarCharValue"]), int(row[1]["VarCharValue"])
+        assert events == 2_669_096, f"events {events} != 2669096"
+        assert fatalities == 2_346_465, f"fatalities {fatalities} != 2346465"
+
     gold = gold_events_wide()
+    fact = fact_events()
     ingest() >> crawl_bronze() >> silver_transform() >> gold
-    dim_date()  # niezależny od danych — czysty kalendarz
-    for name in STAR:
-        gold >> star_task(name)
+    dims = [dim_task(n) for n in DIMS]
+    gold >> dims
+    dims >> fact
+    dim_date() >> fact          # id_date liczony formułą, ale walidujemy po pełnej gwieździe
+    fact >> validate()
 
 
 acled_pipeline()
