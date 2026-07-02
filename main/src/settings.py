@@ -1,4 +1,8 @@
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_ENV_FILE = Path(__file__).resolve().parents[2] / "main" / ".env"
 
 
 class Settings(BaseSettings):
@@ -28,7 +32,15 @@ class Settings(BaseSettings):
     def s3_bronze_bucket(self):
         return f"mw-acled-bronze-{self.environment}"
 
+    @property
+    def s3_silver_bucket(self):
+        return f"mw-acled-silver-{self.environment}"
+
+    @property
+    def glue_database(self):
+        return f"acled_{self.environment}"
+
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=_ENV_FILE,
         env_prefix="ACLED_"
     )

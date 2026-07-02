@@ -3,8 +3,8 @@ from datetime import datetime
 
 import boto3
 
-from src.client import ACLEDClient
-from src.settings import Settings
+from .client import ACLEDClient
+from .settings import Settings
 import logging
 
 logger = logging.getLogger(__name__)
@@ -19,7 +19,9 @@ def _get_last_timestamp():
             Bucket=settings.s3_bronze_bucket,
             Key=settings.s3_last_run_timestamp
         )
-        return response["Body"].read().decode().strip()
+        ts = response["Body"].read().decode().strip()
+        logger.info(f"last timestamp: {ts}, date:{datetime.fromtimestamp(int(ts))}")
+        return ts
     except s3.exceptions.NoSuchKey:
         return None
 
@@ -38,11 +40,11 @@ def delete_load(full=False):
     if last_ts:
         payload["deleted_timestamp"] = last_ts
         payload["deleted_timestamp_where"] = ">="
-
+    record_count = 0
     with ACLEDClient() as client:
-        for i, page in enumerate(client.get_pages(
-            url=settings.deleted_data_url,
-            extra_payload=payload,
+        for i, (page, row_count) in enumerate(client.get_pages(
+                url=settings.deleted_data_url,
+                extra_payload=payload,
         ), 1):
             key = settings.s3_deletes_prefix.format(
                 date=datetime.now().strftime("%Y-%m-%d"),
@@ -53,8 +55,10 @@ def delete_load(full=False):
                 Key=key,
                 Body=page.encode("utf-8"),
             )
+            record_count += row_count
             logger.info(f"uploaded {key}")
     logger.info("delete load completed")
+    return record_count
 
 
 def event_load(full=False):
@@ -64,11 +68,13 @@ def event_load(full=False):
             logger.warning("no timestamp available, run with full=True first")
             return
         extra_payload = {"timestamp": last_ts, "timestamp_where": ">="}
+        logger.warning(f"incremental load run! from timestamp: {last_ts}, date: {datetime.fromtimestamp(int(last_ts))}")
     else:
         extra_payload = None
-
+        logger.warning(f"full load run!")
+    record_count = 0
     with ACLEDClient() as client:
-        for i, page in enumerate(client.get_pages(
+        for i, (page, row_count) in enumerate(client.get_pages(
                 url=settings.read_data_url,
                 extra_payload=extra_payload,
         ), 1):
@@ -81,8 +87,10 @@ def event_load(full=False):
                 Key=key,
                 Body=page.encode("utf-8"),
             )
+            record_count += row_count
             logger.info(f"uploaded {key}")
 
     _save_timestamp()
     mode = "full" if full else "incremental"
     logger.info(f"{mode} event load completed")
+    return record_count

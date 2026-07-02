@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import requests
 import logging
 
-from src.settings import Settings
+from .settings import Settings
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +62,7 @@ class ACLEDClient:
             if row_count == 0:
                 logger.info("no new data, stopping")
                 return
-            yield data
+            yield data, row_count
             logger.info(f"page {page}, rows {row_count}")
 
             if row_count < self.settings.page_size:
