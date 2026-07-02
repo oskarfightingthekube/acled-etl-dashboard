@@ -2,7 +2,7 @@
 -- 06_gold_conflict.sql — warstwa gold: szeroki fakt + rollupy per-pytanie
 -- =============================================================================
 -- ŹRÓDŁA I ROOT CAUSE (ważne, przeczytaj przed edycją):
---   * SILVER (parquet pisany Sparkiem) ma POPRAWNE fatalities (2 346 465) i
+--   * SILVER (parquet pisany Sparkiem) ma POPRAWNE fatalities i
 --     czyste stringi — ale glue/silver_transform.py castuje interaction/inter1/
 --     inter2 do INT, a to etykiety tekstowe -> NULL w plikach silvera.
 --   * BRONZE czytany przez Athena (LazySimpleSerDe) ma interaction jako string,
@@ -12,8 +12,9 @@
 --     są kompletne, brakowało deklaracji. Stąd silver_events_full poniżej.
 -- HYBRYDA: wszystko z silvera + interaction dosztukowany z bronze po
 -- event_id_cnty (dedup latest-timestamp-wins jak w Glue jobie).
--- INWARIANT (weryfikowany po każdej przebudowie): count = 2 669 096,
--- sum(fatalities) = 2 346 465 w każdej tabeli tej warstwy.
+-- INWARIANT (weryfikowany po każdej przebudowie): liczba zdarzeń ORAZ suma
+-- fatalities identyczne w silver == gold == fact (rekoncyliacja warstw; dane
+-- rosną przyrostowo — stan na 2.07.2026: 2 669 294 zdarzeń / 2 346 567 ofiar).
 -- Docelowy fix (po deadline): usunąć INT-casty w silver_transform.py,
 -- re-run Glue, czytać wyłącznie z silvera.
 -- =============================================================================

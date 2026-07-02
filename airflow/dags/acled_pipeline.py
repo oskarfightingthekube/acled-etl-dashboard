@@ -8,7 +8,8 @@ sql/10_star_schema.sql (źródło prawdy = pliki sql/).
 
 Źródła (root cause udokumentowany w sql/06): silver ma poprawne fatalities
 i czyste stringi, bronze-przez-Athena ma interaction; gold_events_wide = hybryda.
-Inwariant po każdym runie: 2 669 096 zdarzeń, 2 346 465 fatalities.
+Walidacja po każdym runie: rekoncyliacja warstw (silver == gold == fakt,
+liczba zdarzeń i suma fatalities) — odporna na przyrostowe zasilanie.
 
 Gałąź Glue (crawler + silver job) jest opt-in (param run_glue), bo wymaga
 uprawnień glue:*. Ścieżka Athena-only działa z Athena+S3+Glue-Data-Catalog.
@@ -225,10 +226,17 @@ def acled_pipeline():
 
     @task
     def validate():
-        """Inwariant: 2 669 096 zdarzeń i 2 346 465 fatalities w fakcie."""
+        """Rekoncyliacja warstw: silver == gold == fakt (liczba zdarzeń ORAZ suma
+        fatalities). Odporna na przyrostowe zasilanie — sprawdzamy zgodność
+        między warstwami, nie zahardkodowane snapshoty (te pękają, gdy ingest
+        dowiezie nowe dane — co jest poprawnym zachowaniem, nie błędem)."""
         c = boto3.client("athena", region_name=REGION)
         qid = c.start_query_execution(
-            QueryString="SELECT count(*), sum(fatalities) FROM acled_dev.fact_events",
+            QueryString=(
+                "SELECT 'silver' l, count(*) c, sum(fatalities) f FROM acled_dev.silver_events_full "
+                "UNION ALL SELECT 'gold', count(*), sum(fatalities) FROM acled_dev.gold_events_wide "
+                "UNION ALL SELECT 'fact', count(*), sum(fatalities) FROM acled_dev.fact_events"
+            ),
             QueryExecutionContext={"Database": DB},
             ResultConfiguration={"OutputLocation": ATHENA_OUT},
             WorkGroup=WORKGROUP,
@@ -238,10 +246,13 @@ def acled_pipeline():
             if st in ("SUCCEEDED", "FAILED", "CANCELLED"):
                 break
             time.sleep(2)
-        row = c.get_query_results(QueryExecutionId=qid)["ResultSet"]["Rows"][1]["Data"]
-        events, fatalities = int(row[0]["VarCharValue"]), int(row[1]["VarCharValue"])
-        assert events == 2_669_096, f"events {events} != 2669096"
-        assert fatalities == 2_346_465, f"fatalities {fatalities} != 2346465"
+        rows = c.get_query_results(QueryExecutionId=qid)["ResultSet"]["Rows"][1:]
+        stats = {r["Data"][0]["VarCharValue"]:
+                 (int(r["Data"][1]["VarCharValue"]), int(r["Data"][2]["VarCharValue"]))
+                 for r in rows}
+        print(f"rekoncyliacja: {stats}")
+        assert stats["silver"] == stats["gold"] == stats["fact"], f"warstwy niespójne: {stats}"
+        assert stats["fact"][0] > 2_600_000, f"podejrzanie mało zdarzeń: {stats['fact'][0]}"
 
     gold = gold_events_wide()
     fact = fact_events()

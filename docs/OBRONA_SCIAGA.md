@@ -22,8 +22,8 @@ gold, **modelem semantycznym i raportami w Power BI**. Całość odpowiada na
 - **ACLED** (Armed Conflict Location & Event Data) — publiczny, ekspercki
   rejestr zdarzeń konfliktowych: bitwy, protesty, zamieszki, przemoc wobec
   cywilów, ostrzały. Dane NIE są generowane — pobieramy z oficjalnego API
-  (wymóg projektu). Zakres: 1997–2025, cały świat, 2 669 096 zdarzeń po
-  deduplikacji.
+  (wymóg projektu). Zakres: 1997–2025, cały świat, ~2,67 mln zdarzeń po deduplikacji
+  (rośnie przyrostowo; 2 669 294 na 2.07.2026).
 - **World Bank, wskaźnik SP.POP.TOTL** — populacja kraj×rok (6 235 wierszy,
   215 krajów), do pytań per capita.
 - **12 pytań biznesowych** (README): geografia i skala (Q1–2), trendy czasowe
@@ -55,7 +55,7 @@ ACLED API ──(1) Python ingest──► BRONZE (S3, surowe CSV, append-only)
                   (6) Power BI: model semantyczny (DAX) + raporty
         ────────────────────────────────────────────────────────────
         Orkiestracja kroków 2–5: Apache Airflow (DAG acled_pipeline)
-        + task `validate` (asserty inwariantów po każdym runie)
+        + task `validate` (rekoncyliacja warstw po każdym runie)
 ```
 
 ### 2.1 Ekstrakcja (E) — `src/ingest.py`
@@ -83,8 +83,8 @@ ACLED API ──(1) Python ingest──► BRONZE (S3, surowe CSV, append-only)
   - **anti-join z `deletes`** — usuwamy skasowane,
   - typowanie (daty, inty, double),
   - zapis do **Parquet** (kolumnowy, kompresowany — patrz pyt. o wydajność).
-- Wynik: dokładnie **2 669 096** wierszy (z 2 669 918 surowych — 822
-  duplikaty/delete'y usunięte).
+- Wynik: jeden wiersz na zdarzenie (2 669 294 na 2.07.2026); duplikaty
+  i delete'y usuwane przy każdym zasileniu.
 
 ### 2.4 Gold — integracja i czyszczenie (`sql/06`)
 - `gold_events_wide` = oczyszczona, szeroka tabela zdarzeń w Athena:
@@ -103,7 +103,7 @@ ACLED API ──(1) Python ingest──► BRONZE (S3, surowe CSV, append-only)
 - **Temat**: zdarzenia konfliktów. **Ziarnistość**: jedno zdarzenie (fakt
   transakcyjny). **Miary**: `fatalities` (addytywna), `civilian_targeting_flag`
   (0/1, addytywna — sumą jest liczba zdarzeń wymierzonych w cywilów).
-- **Fakt `fact_events`** (2 669 096): WYŁĄCZNIE klucze wymiarów + miary
+- **Fakt `fact_events`** (~2,67 mln): WYŁĄCZNIE klucze wymiarów + miary
   (Zasada nr 1 z wykładu 3) + `event_id_cnty` jako **wymiar zdegenerowany**
   (unikalny per wiersz — dokładnie jak „NrZamówienia" z wykładu).
 - **7 wymiarów, wszystkie z kluczami sztucznymi**:
@@ -207,9 +207,9 @@ uszkodzeniu?"), integrację formatów i wartość rekoncyliacji niezależnych
 
 | Liczba | Co to |
 |---|---|
-| **2 669 096** | zdarzeń po dedup (inwariant nr 1 — w KAŻDEJ tabeli) |
-| **2 346 465** | suma ofiar (inwariant nr 2 — w KAŻDEJ tabeli) |
-| 2 669 918 → 822 | surowe wiersze → usunięte duplikaty/delete'y |
+| **2 669 294** | zdarzeń po dedup (stan 2.07.2026; rekoncyliacja: silver==gold==fakt) |
+| **2 346 567** | suma ofiar (stan 2.07.2026; druga metryka rekoncyliacji) |
+| ~2,67 mln po dedup | duplikaty + delete'y usuwane przy każdym zasileniu |
 | 1997–2025 | zakres danych; 10 592 dni w dim_date |
 | 242 / 26 / 16 494 / 1 874 / 134 / 6 235 | wiersze wymiarów (kraj / typ / aktor / źródło / interakcja / populacja) |
 | 431 695 | zdarzenia z celowaniem w cywilów (~16%) |
@@ -348,7 +348,7 @@ duże legendy, drill-down od ogółu do szczegółu.
 3. **Airflow** (`docker compose up -d`, `localhost:8080`) — Trigger DAG
    (bez `run_glue`) → zielony graf w ~2 min → pokaż log `validate`.
 4. **Athena** — `SELECT count(*), sum(fatalities) FROM acled_dev.fact_events`
-   → 2 669 096 / 2 346 465.
+   → liczby zgodne między warstwami (rekoncyliacja).
 5. **Power BI** — widok modelu (gwiazda!), miara w DAX, dashboard, drill-down
    Rok→Kwartał→Miesiąc, slicer, mapa.
 6. Puenta: historia z cudzysłowami (sekcja 4) — pokazuje, że rozumiemy nie

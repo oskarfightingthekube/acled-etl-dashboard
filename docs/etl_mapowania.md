@@ -5,8 +5,9 @@ zgodnie z wymaganiami zadania. Każdy etap odpowiada zadaniu w DAG-u Airflow
 `acled_pipeline` (screeny udanego ładowania każdego wymiaru i faktów — katalog
 `screeny/`, widok grafu + logi zadań z Airflow UI).
 
-Inwariant kontrolny po pełnym przebiegu: **2 669 096 zdarzeń**,
-**2 346 465 fatalities** — walidowany automatycznie zadaniem `validate` w DAG-u.
+Kontrola po pełnym przebiegu: **rekoncyliacja warstw** — liczba zdarzeń i suma
+fatalities muszą być identyczne w silver == gold == fakt (zadanie `validate`
+w DAG-u). Dane rosną przyrostowo; stan na 2.07.2026: 2 669 294 / 2 346 567.
 
 ---
 
@@ -92,7 +93,7 @@ wykład 3) + wymiar zdegenerowany `event_id_cnty`.
 
 | Kontrola | Oczekiwane | Jak |
 |---|---|---|
-| liczba zdarzeń w fakcie | 2 669 096 | `COUNT(*)` — assert w DAG-u |
-| suma fatalities | 2 346 465 | `SUM(fatalities)` — assert w DAG-u |
+| zgodność liczby zdarzeń | silver == gold == fakt | rekoncyliacja — assert w DAG-u |
+| zgodność sumy fatalities | silver == gold == fakt | rekoncyliacja — assert w DAG-u |
 | integralność FK (sieroty) | 0 dla każdego wymiaru | LEFT JOIN fakt→wymiar, `COUNT(id IS NULL)` |
 | unikalność surogatów | rows = distinct w każdym wymiarze | `COUNT(*) vs COUNT(DISTINCT id)` |
