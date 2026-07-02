@@ -1,7 +1,7 @@
 # Power BI design spec — ACLED dashboard (Q1–5)
 
 A builder follows this in **Power BI Desktop**. Claude cannot produce a `.pbix`
-(binary), so this spec + `sql/05_bi_queries.sql` are the handoff. Connect via
+(binary), so this spec + `main/sql/05_bi_queries.sql` are the handoff. Connect via
 **Get Data → Amazon Athena (ODBC)** to database `acled_dev`.
 
 > **Calibration note.** The palette, fonts and layout below are a sensible
@@ -185,13 +185,13 @@ strip = page title + KPI cards; body = 2×2 visual grid. Seven report pages:
 | Q12b | 7 | Table | 09·Q12b | country | — | rank_absolute, rank_per_capita, events_per_100k |
 | Q12c | 7 | Line | 09·Q12c | year | country | events_per_100k, fatalities_per_100k |
 
-Queries prefixed `08·` are in `sql/08_bi_queries_extended.sql`, `09·` in
-`sql/09_bi_queries_percapita.sql`; the rest in `sql/05_bi_queries.sql`.
+Queries prefixed `08·` are in `main/sql/08_bi_queries_extended.sql`, `09·` in
+`main/sql/09_bi_queries_percapita.sql`; the rest in `main/sql/05_bi_queries.sql`.
 
 ## 5. Coverage & caveats (tell the colleagues)
 
 **All 12 business questions are now answerable** — the gold layer was extended
-(`sql/06_gold_conflict.sql`, `07_dim_population.sql`) and every query is verified
+(`main/sql/06_gold_conflict.sql`, `07_dim_population.sql`) and every query is verified
 against live Athena data. Remaining caveats, none blocking:
 
 - **Q2 map** ships as a country choropleth. A point/admin1 bubble map is now
@@ -205,7 +205,7 @@ against live Athena data. Remaining caveats, none blocking:
 - **Minor data artifact**: a few misaligned source rows produce tiny negative
   fatalities (net ~-20 over 79k events). Negligible; clamp with `GREATEST(x,0)`
   in `gold_events_wide` if a stakeholder objects.
-- **Root-cause note for the pipeline owner**: `glue/silver_transform.py` casts
+- **Root-cause note for the pipeline owner**: `main/glue/silver_transform.py` casts
   `interaction`/`inter1`/`inter2` to INT, but they are STRING labels → NULL in
-  silver. `sql/06` works around it by rebuilding from bronze. Proper fix = drop
+  silver. `main/sql/06` works around it by rebuilding from bronze. Proper fix = drop
   those int casts in the Glue job and re-run silver.

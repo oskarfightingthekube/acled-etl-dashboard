@@ -12,7 +12,7 @@ sprawdzamy, co jest zrobione, gdzie to leży i jak to pokazać na żywo.
 | 1 | Zespół 2–4 osoby | ✅ | Oskar, Maciek, Karol |
 | 2 | Dane z sieci, NIE generowane | ✅ | ACLED (realne dane o konfliktach, 1997–2025, 2,67 mln zdarzeń) + World Bank (populacja) |
 | 3 | Pytania biznesowe | ✅ | 12 pytań — `README.md`, sekcja *Business Questions* |
-| 4 | Model wielowymiarowy | ✅ | schemat gwiazdy — `sql/10_star_schema.sql`, diagram niżej |
+| 4 | Model wielowymiarowy | ✅ | schemat gwiazdy — `main/sql/10_star_schema.sql`, diagram niżej |
 | 5 | Baza hurtowni | ✅ | lakehouse: S3 (bronze/silver/gold) + AWS Athena + Glue Catalog |
 | 6 | Narzędzie integracyjne + ETL | ✅ | **Apache Airflow** (`airflow/`) + AWS Glue + Athena CTAS |
 | 7 | Warstwa semantyczna | ✅ (kod) / 🔄 (otwarcie) | model Power BI — wygenerowany w `powerbi/ACLED/`, 15 miar DAX, 6 relacji |
@@ -30,9 +30,9 @@ pytania istnieje zweryfikowane zapytanie SQL:
 
 | Pytania | Plik SQL |
 |---------|----------|
-| Q1–Q5 | `sql/05_bi_queries.sql` |
-| Q6–Q11 | `sql/08_bi_queries_extended.sql` |
-| Q12 (per capita) | `sql/09_bi_queries_percapita.sql` |
+| Q1–Q5 | `main/sql/05_bi_queries.sql` |
+| Q6–Q11 | `main/sql/08_bi_queries_extended.sql` |
+| Q12 (per capita) | `main/sql/09_bi_queries_percapita.sql` |
 
 **Wyjaśnienie.** Punkt jest przyznawany „pod warunkiem realizacji" — czyli
 raporty (Blok 5) muszą faktycznie odpowiadać na te pytania. SQL-e per-pytanie
@@ -46,9 +46,9 @@ przypisać stronę raportu oraz miarę, która na nie odpowiada.
 
 ## Blok 2. Schemat gwiazdy — 5 pkt
 
-**Gdzie jesteśmy:** `sql/10_star_schema.sql` + baza `acled_dev` w Athena.
+**Gdzie jesteśmy:** `main/sql/10_star_schema.sql` + baza `acled_dev` w Athena.
 
-![Schemat gwiazdy](../images/star_schema.png)
+![Schemat gwiazdy](../main/images/star_schema.png)
 
 Tabela faktów `fact_events` (2 669 096 wierszy, ziarno = jedno zdarzenie)
 i 6 wymiarów: `dim_country`, `dim_date` (ciągły kalendarz 1997–2025),
@@ -75,11 +75,11 @@ projektu). Konsultacje: piątki 20:00, MS Teams, kod kursu `pzyozi0`.
 
 ## Blok 3. ETL uruchomiony na żywo — 20 pkt
 
-**Gdzie jesteśmy:** katalog `airflow/` + `glue/silver_transform.py` + `src/`.
+**Gdzie jesteśmy:** katalog `airflow/` + `main/glue/silver_transform.py` + `main/src/`.
 
-![Architektura](../images/architecture.png)
+![Architektura](../main/images/architecture.png)
 
-Przepływ: ACLED API → **E**kstrakcja (Python, `src/ingest.py`) → S3 bronze
+Przepływ: ACLED API → **E**kstrakcja (Python, `main/src/ingest.py`) → S3 bronze
 (append-only) → Glue Crawler (katalog) → **T**ransformacje: Glue job (silver,
 Spark) oraz Athena CTAS (gold: dedup, czyszczenie cudzysłowów, naprawa
 `interaction`, flaga civilian targeting) → **Ł**adowanie do schematu gwiazdy.
@@ -89,7 +89,7 @@ Całość spina DAG Airflow `acled_pipeline`.
 
     cd airflow
     docker compose up -d
-    docker compose exec airflow cat /opt/airflow/standalone_admin_password.txt
+    docker compose exec airflow cat /opt/airflow/simple_auth_manager_passwords.json.generated
 
 1. Wejdź na `http://localhost:8080`, zaloguj się (`admin` + hasło z pliku).
 2. DAG `acled_pipeline` → przycisk **Trigger**.
@@ -172,7 +172,7 @@ Checklist elementów wymaganych na zajęciach:
 
 Przykładowe wcześniejsze wizualizacje (do zachowania stylu):
 
-![Trend](../images/chart-times-series.png)
+![Trend](../main/images/chart-times-series.png)
 
 **Zadanie kontrolne:** czy każda strona odpowiada na konkretne pytanie
 z README i czy użytkownik nieznający modelu zrozumie ją w kilka sekund?
@@ -198,7 +198,7 @@ z README i czy użytkownik nieznający modelu zrozumie ją w kilka sekund?
 
 | Kiedy | Co | Kto |
 |-------|----|----|
-| dziś | mail do prowadzącej: prośba o sprawdzenie schematu (załącz `images/star_schema.png`) | Oskar |
+| dziś | mail do prowadzącej: prośba o sprawdzenie schematu (załącz `main/images/star_schema.png`) | Oskar |
 | dziś/jutro | otwarcie PBIP (Ścieżka A) lub model ręcznie (Ścieżka B) | Karol |
 | jutro | 7 stron raportu + dashboard + checklist z Bloku 5 | Karol + Maciek |
 | jutro 20:00 | konsultacje Teams (kod `pzyozi0`) — pokazać schemat | zespół |

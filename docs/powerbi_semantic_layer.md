@@ -7,7 +7,7 @@ Power BI (relacje + miary DAX + hierarchie), a NIE w SQL.** SQL, którym się
 itd.) — bez GROUP BY / WHERE / agregacji.
 
 Rollupy (`gold_geography`, `gold_yearly_trends`, …) i SQL per-pytanie
-(`sql/05,08,09`) NIE są warstwą semantyczną — to **uzasadnienie**, dlaczego
+(`main/sql/05,08,09`) NIE są warstwą semantyczną — to **uzasadnienie**, dlaczego
 wybraliśmy te wymiary i miary. Ten sam model odpowiada na wszystkie 12 pytań
 przez zmianę wymiaru na osi + slicery, zamiast 12 hardkodowanych zapytań.
 

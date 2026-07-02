@@ -3,10 +3,10 @@
 Idempotentny: przed każdym CTAS robi DROP TABLE IF EXISTS + czyści prefix S3,
 więc DAG można odpalać wielokrotnie (bare CREATE TABLE padłby przy 2. runie).
 
-SQL trzymany inline — TRZYMAĆ W SYNCU z sql/06_gold_conflict.sql i
-sql/10_star_schema.sql (źródło prawdy = pliki sql/).
+SQL trzymany inline — TRZYMAĆ W SYNCU z main/sql/06_gold_conflict.sql i
+main/sql/10_star_schema.sql (źródło prawdy = pliki sql/).
 
-Źródła (root cause udokumentowany w sql/06): silver ma poprawne fatalities
+Źródła (root cause udokumentowany w main/sql/06): silver ma poprawne fatalities
 i czyste stringi, bronze-przez-Athena ma interaction; gold_events_wide = hybryda.
 Walidacja po każdym runie: rekoncyliacja warstw (silver == gold == fakt,
 liczba zdarzeń i suma fatalities) — odporna na przyrostowe zasilanie.
@@ -15,7 +15,7 @@ Gałąź Glue (crawler + silver job) jest opt-in (param run_glue), bo wymaga
 uprawnień glue:*. Ścieżka Athena-only działa z Athena+S3+Glue-Data-Catalog.
 
 UWAGA: dim_population (źródłowy TSV World Bank) i silver_events_full (DDL nad
-istniejącym parquetem) to jednorazowy setup (sql/07, sql/06) — celowo POZA
+istniejącym parquetem) to jednorazowy setup (main/sql/07, main/sql/06) — celowo POZA
 DAG-iem, żeby nic nie czyściło ich danych.
 """
 from __future__ import annotations
@@ -24,9 +24,14 @@ import time
 
 import boto3
 import pendulum
-from airflow.decorators import dag, task
 from airflow.exceptions import AirflowSkipException
-from airflow.models.param import Param
+
+try:  # Airflow 3.x
+    from airflow.sdk import Param, dag, task, get_current_context
+except ImportError:  # Airflow 2.x
+    from airflow.decorators import dag, task
+    from airflow.models.param import Param
+    from airflow.operators.python import get_current_context
 
 REGION = "eu-central-1"
 DB = "acled_dev"
@@ -89,7 +94,7 @@ FROM acled_dev.silver_events_full s
 LEFT JOIN bronze_interaction b ON s.event_id_cnty = b.event_id_cnty
 """
 
-# wymiary z surogatami + wiersz Unknown (id = -1); patrz sql/10
+# wymiary z surogatami + wiersz Unknown (id = -1); patrz main/sql/10
 DIMS = {
     "dim_country": (
         "star/dim_country/",
@@ -174,15 +179,15 @@ def acled_pipeline():
 
     @task
     def ingest():
-        # ponytail: ekstrakcja API->bronze żyje w src/ingest.py i wymaga klucza
+        # ponytail: ekstrakcja API->bronze żyje w main/src/ingest.py i wymaga klucza
         # ACLED; w kontenerze demo pomijamy — bronze już jest w S3.
         raise AirflowSkipException(
-            "Ingest pominięty — bronze już w S3. Pełny run: python main.py na hoście."
+            "Ingest pominięty — bronze już w S3. Pełny run: python main/main.py na hoście."
         )
 
     @task(trigger_rule="none_failed")
-    def crawl_bronze(**ctx):
-        if not ctx["params"]["run_glue"]:
+    def crawl_bronze():
+        if not get_current_context()["params"]["run_glue"]:
             raise AirflowSkipException("run_glue=False — pomijam crawlery")
         glue = boto3.client("glue", region_name=REGION)
         for name in BRONZE_CRAWLERS:
@@ -192,8 +197,8 @@ def acled_pipeline():
                 time.sleep(10)
 
     @task(trigger_rule="none_failed")
-    def silver_transform(**ctx):
-        if not ctx["params"]["run_glue"]:
+    def silver_transform():
+        if not get_current_context()["params"]["run_glue"]:
             raise AirflowSkipException("run_glue=False — pomijam Glue job")
         glue = boto3.client("glue", region_name=REGION)
         run_id = glue.start_job_run(JobName=SILVER_GLUE_JOB)["JobRunId"]

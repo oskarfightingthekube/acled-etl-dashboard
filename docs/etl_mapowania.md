@@ -13,7 +13,7 @@ w DAG-u). Dane rosną przyrostowo; stan na 2.07.2026: 2 669 294 / 2 346 567.
 
 ## Etap 1 — Ekstrakcja: ACLED API → BRONZE (S3)
 
-Narzędzie: Python (`src/ingest.py`), uruchamiane z `main.py`. OAuth + paginacja
+Narzędzie: Python (`main/src/ingest.py`), uruchamiane z `main.py`. OAuth + paginacja
 po 5 000 rekordów; stan ostatniego pobrania w `state/last_run_timestamp.txt`
 (ładowanie przyrostowe wg znacznika czasu — „informacja o czasie wprowadzenia
 dostępna w źródle", wykład 4).
@@ -27,7 +27,7 @@ Katalogowanie: Glue Crawler → tabele `acled_dev.events`, `acled_dev.deletes`.
 
 ## Etap 2 — Przekształcenie: BRONZE → SILVER (Glue job, Spark)
 
-Narzędzie: AWS Glue (`glue/silver_transform.py`). Wynik: Parquet,
+Narzędzie: AWS Glue (`main/glue/silver_transform.py`). Wynik: Parquet,
 `s3://mw-acled-silver-dev/events/` (tabela `silver_events_full`).
 
 | Kolumna źródłowa (bronze) | Transformacja | Kolumna docelowa (silver) |
@@ -44,7 +44,7 @@ Narzędzie: AWS Glue (`glue/silver_transform.py`). Wynik: Parquet,
 ## Etap 3 — Integracja: SILVER + BRONZE → GOLD (Athena CTAS)
 
 Zadanie DAG: `gold_events_wide`. Hybryda źródeł (root cause w nagłówku
-`sql/06_gold_conflict.sql`): silver = poprawne liczby i czyste teksty;
+`main/sql/06_gold_conflict.sql`): silver = poprawne liczby i czyste teksty;
 bronze = jedyne źródło `interaction` jako tekst.
 
 | Kolumna źródłowa | Źródło | Transformacja | Kolumna docelowa |
@@ -68,7 +68,7 @@ sztucznymi** `ROW_NUMBER()` + wiersz **`Unknown` (id = -1)** za pseudo-nulle
 | `dim_actor` | gold, `DISTINCT actor1` | + Unknown | `id_actor` (surogat) |
 | `dim_source` | gold, `DISTINCT source_scale` | + Unknown | `id_source` (surogat) |
 | `dim_interaction` | gold, `DISTINCT interaction` | 134 pary aktorów + Unknown (normalny wymiar — za mała liczność na zdegenerowany) | `id_interaction` (surogat) |
-| `dim_population_year` | World Bank SP.POP.TOTL (`dim_population`, setup jednorazowy `sql/07`) | klucz złożony (iso, rok) spłaszczony: `iso*10000+rok` | `iso_year` |
+| `dim_population_year` | World Bank SP.POP.TOTL (`dim_population`, setup jednorazowy `main/sql/07`) | klucz złożony (iso, rok) spłaszczony: `iso*10000+rok` | `iso_year` |
 
 ## Etap 5 — Ładowanie faktów: GOLD + wymiary → `fact_events`
 

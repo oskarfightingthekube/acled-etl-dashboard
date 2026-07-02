@@ -1,6 +1,11 @@
 # Airflow — orkiestracja ACLED ETL
 
-Lokalny Airflow (docker-compose) z DAG-iem `acled_pipeline`:
+Lokalny Airflow 3.2 (docker-compose) z dwoma DAG-ami:
+
+- **`acled_manual_backfill`** (Maciek): ekstrakcja z API ACLED (full/incremental)
+  → ShortCircuit gdy brak nowych danych → crawlery → silver (Glue).
+  Wymaga prawdziwych `ACLED_EMAIL`/`ACLED_PASSWORD` (w compose są stuby).
+- **`acled_pipeline`**: gold → schemat gwiazdy → walidacja (rekoncyliacja):
 
 ```
 ingest(skip) → crawl_bronze → silver_transform → gold_events_wide → 6 tabel gwiazdy
@@ -16,7 +21,7 @@ CTAS), więc DAG można odpalać wielokrotnie — np. na żywo na obronie.
 ```bash
 cd airflow
 docker compose up -d
-docker compose exec airflow cat /opt/airflow/standalone_admin_password.txt  # hasło
+docker compose exec airflow cat /opt/airflow/simple_auth_manager_passwords.json.generated  # hasło (Airflow 3)
 ```
 UI: http://localhost:8080 (user `admin`). DAG `acled_pipeline` → **Trigger**.
 
@@ -61,8 +66,8 @@ z obecnymi uprawnieniami, co potwierdza ręczne budowanie gold/gwiazdy.)
 
 - **`dim_population` celowo NIE jest w DAG-u** — to EXTERNAL TABLE na
   źródłowym TSV (World Bank); czyszczenie jego prefixu = utrata danych.
-  Setup jednorazowy: `sql/07_dim_population.sql`.
-- SQL w DAG-u jest inline — **trzymać w syncu** z `sql/06` i `sql/10`
+  Setup jednorazowy: `main/sql/07_dim_population.sql`.
+- SQL w DAG-u jest inline — **trzymać w syncu** z `main/sql/06` i `main/sql/10`
   (pliki sql/ = źródło prawdy).
-- Rollupy per-pytanie (`sql/02–04`, część `06`) nie są w DAG-u: model Power BI
+- Rollupy per-pytanie (`main/sql/02–04`, część `06`) nie są w DAG-u: model Power BI
   jedzie na gwieździe; rollupy zostają jako uzasadnienie wymiarów/miar.

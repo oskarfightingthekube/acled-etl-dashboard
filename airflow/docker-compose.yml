@@ -1,11 +1,13 @@
 # Lokalny Airflow do orkiestracji ACLED ETL (demo/obrona).
 # Start:    docker compose up -d
-# Hasło:    docker compose exec airflow cat /opt/airflow/standalone_admin_password.txt
+# Hasło:    docker compose exec airflow cat /opt/airflow/simple_auth_manager_passwords.json.generated
 # UI:       http://localhost:8080  (user: admin)
+# Wersja 3.2.x — zgodna z airflow/pyproject.toml (środowisko uv Maćka);
+# oba DAG-i (acled_manual_backfill + acled_pipeline) działają w jednym UI.
 # ponytail: standalone + SQLite starczy na demo; CeleryExecutor gdy będzie potrzebna skala
 services:
   airflow:
-    image: apache/airflow:2.10.4
+    image: apache/airflow:3.2.2
     command: standalone
     ports:
       - "8080:8080"
@@ -13,6 +15,14 @@ services:
       AWS_DEFAULT_REGION: eu-central-1
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
       AIRFLOW__CORE__DEFAULT_TIMEZONE: Europe/Warsaw
+      PYTHONPATH: /opt/airflow
+      # deps DAG-a acled_manual_backfill (import main.src.*)
+      _PIP_ADDITIONAL_REQUIREMENTS: "pydantic-settings requests"
+      # stuby, żeby Settings() importował się bez prawdziwego konta ACLED;
+      # realny ingest = podmień na prawdziwe albo trzymaj w main/.env
+      ACLED_EMAIL: stub@example.com
+      ACLED_PASSWORD: stub
     volumes:
       - ./dags:/opt/airflow/dags
-      - ~/.aws:/home/airflow/.aws:ro   # kredki AWS z hosta (read-only)
+      - ../main:/opt/airflow/main:ro           # pakiet main dla DAG-a backfill
+      - ~/.aws:/home/airflow/.aws:ro           # kredki AWS z hosta (read-only)

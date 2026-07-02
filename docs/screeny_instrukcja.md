@@ -8,7 +8,7 @@ Nasze ładowania = zadania DAG-a `acled_pipeline` w Airflow (task per wymiar +
 fakt + walidacja). Jak zrobić komplet:
 
 1. Uruchom Airflow: `cd airflow && docker compose up -d` → `http://localhost:8080`
-   (hasło: `docker compose exec airflow cat /opt/airflow/standalone_admin_password.txt`).
+   (hasło: `docker compose exec airflow cat /opt/airflow/simple_auth_manager_passwords.json.generated`).
 2. DAG `acled_pipeline` → **Trigger** → poczekaj na zielono (~2 min).
 3. **Screen 1 — graf całości:** widok *Graph*, wszystkie zadania zielone
    (`success`), widoczne nazwy: `gold_events_wide`, `dim_country`, `dim_date`,

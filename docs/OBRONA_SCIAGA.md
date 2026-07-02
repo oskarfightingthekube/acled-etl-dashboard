@@ -58,7 +58,7 @@ ACLED API ──(1) Python ingest──► BRONZE (S3, surowe CSV, append-only)
         + task `validate` (rekoncyliacja warstw po każdym runie)
 ```
 
-### 2.1 Ekstrakcja (E) — `src/ingest.py`
+### 2.1 Ekstrakcja (E) — `main/src/ingest.py`
 - OAuth do API ACLED, paginacja po 5 000 rekordów.
 - **Ładowanie przyrostowe**: stan ostatniego pobrania w
   `state/last_run_timestamp.txt`; przy kolejnym runie bierzemy tylko rekordy
@@ -75,7 +75,7 @@ ACLED API ──(1) Python ingest──► BRONZE (S3, surowe CSV, append-only)
   `acled_dev` (katalog Glue = nasze **metadane techniczne**).
 
 ### 2.3 Silver — jedna wersja prawdy
-- Job **AWS Glue (Spark)**, `glue/silver_transform.py`:
+- Job **AWS Glue (Spark)**, `main/glue/silver_transform.py`:
   - **deduplikacja**: `row_number() OVER (PARTITION BY event_id_cnty ORDER BY
     timestamp DESC) = 1` — najnowsza wersja zdarzenia wygrywa. To w praktyce
     **SCD typ 1** (nadpisujemy starą wartość, nie trzymamy historii zmian
@@ -86,7 +86,7 @@ ACLED API ──(1) Python ingest──► BRONZE (S3, surowe CSV, append-only)
 - Wynik: jeden wiersz na zdarzenie (2 669 294 na 2.07.2026); duplikaty
   i delete'y usuwane przy każdym zasileniu.
 
-### 2.4 Gold — integracja i czyszczenie (`sql/06`)
+### 2.4 Gold — integracja i czyszczenie (`main/sql/06`)
 - `gold_events_wide` = oczyszczona, szeroka tabela zdarzeń w Athena:
   - liczby i teksty **z silvera** (patrz sekcja 4 — root cause),
   - kolumna `interaction` dosztukowana **z bronze** (w silverze zepsuta
@@ -99,7 +99,7 @@ ACLED API ──(1) Python ingest──► BRONZE (S3, surowe CSV, append-only)
   (tam liczy DAX na gwieździe) — są uzasadnieniem doboru wymiarów i miar oraz
   niezależną ścieżką weryfikacji wyników.
 
-### 2.5 Schemat gwiazdy (`sql/10`) — serce projektu
+### 2.5 Schemat gwiazdy (`main/sql/10`) — serce projektu
 - **Temat**: zdarzenia konfliktów. **Ziarnistość**: jedno zdarzenie (fakt
   transakcyjny). **Miary**: `fatalities` (addytywna), `civilian_targeting_flag`
   (0/1, addytywna — sumą jest liczba zdarzeń wymierzonych w cywilów).
@@ -331,7 +331,7 @@ duże legendy, drill-down od ogółu do szczegółu.
 
 | Zarzut | Obrona |
 |---|---|
-| „Silver ma zepsutą kolumnę interaction" | Znany bug (INT-cast w Glue), udokumentowany w sql/06; obejście hybrydą z bronze; docelowy fix = usunięcie castów i re-run joba — nie zdążył przed oddaniem, bo wymaga uprawnień glue:* |
+| „Silver ma zepsutą kolumnę interaction" | Znany bug (INT-cast w Glue), udokumentowany w main/sql/06; obejście hybrydą z bronze; docelowy fix = usunięcie castów i re-run joba — nie zdążył przed oddaniem, bo wymaga uprawnień glue:* |
 | „Podwójne czyszczenie: Glue i Athena robią dedup" | Świadoma redundancja na czas projektu: silver = kanoniczny clean (Glue), CTE w gold = ta sama logika dla kolumny ratowanej z bronze; po zjeździe zostaje tylko ścieżka silver |
 | „Czemu lat/long nie ma w gwieździe?" | Zasada 1: fakt = klucze+miary; współrzędne zostały w gold_events_wide — mapa w raportach idzie po kraju (choropleta), punktowa możliwa z gold |
 | „Rollupy dublują gwiazdę" | Rola: agregaty (perspektywy zmaterializowane) + uzasadnienie wymiarów/miar + niezależna ścieżka weryfikacji (to one wykryły błąd fatalities) |
@@ -343,8 +343,8 @@ duże legendy, drill-down od ogółu do szczegółu.
 
 ## 8. Scenariusz demo (5 minut, przećwiczyć raz)
 
-1. **README** — pytania biznesowe + diagram architektury (`images/architecture.png`).
-2. **Diagram gwiazdy** (`images/star_schema.png`) — omów fakt/wymiary/klucze.
+1. **README** — pytania biznesowe + diagram architektury (`main/images/architecture.png`).
+2. **Diagram gwiazdy** (`main/images/star_schema.png`) — omów fakt/wymiary/klucze.
 3. **Airflow** (`docker compose up -d`, `localhost:8080`) — Trigger DAG
    (bez `run_glue`) → zielony graf w ~2 min → pokaż log `validate`.
 4. **Athena** — `SELECT count(*), sum(fatalities) FROM acled_dev.fact_events`
