@@ -68,7 +68,7 @@ def _rebuild(table: str, prefix: str, ctas_body: str) -> None:
 
 GOLD_EVENTS_WIDE = """
 WITH bronze_interaction AS (
-    SELECT event_id_cnty, trim(replace(interaction, '"', '')) AS interaction
+    SELECT event_id_cnty, NULLIF(trim(replace(interaction, '"', '')), '') AS interaction
     FROM (SELECT event_id_cnty, interaction,
                  row_number() OVER (PARTITION BY event_id_cnty ORDER BY timestamp DESC) rn
           FROM acled_dev.events)

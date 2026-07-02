@@ -42,7 +42,7 @@ WITH (format = 'PARQUET', external_location = 's3://mw-acled-gold-dev/events_wid
 AS
 WITH bronze_interaction AS (
     -- interaction istnieje tylko w bronze jako string; dedup identyczny jak w Glue
-    SELECT event_id_cnty, trim(replace(interaction, '"', '')) AS interaction
+    SELECT event_id_cnty, NULLIF(trim(replace(interaction, '"', '')), '') AS interaction
     FROM (SELECT event_id_cnty, interaction,
                  row_number() OVER (PARTITION BY event_id_cnty ORDER BY timestamp DESC) rn
           FROM acled_dev.events)
