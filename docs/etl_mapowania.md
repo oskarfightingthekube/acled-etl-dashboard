@@ -68,7 +68,7 @@ sztucznymi** `ROW_NUMBER()` + wiersz **`Unknown` (id = -1)** za pseudo-nulle
 | `dim_actor` | gold, `DISTINCT actor1` | + Unknown | `id_actor` (surogat) |
 | `dim_source` | gold, `DISTINCT source_scale` | + Unknown | `id_source` (surogat) |
 | `dim_interaction` | gold, `DISTINCT interaction` | 134 pary aktorów + Unknown (normalny wymiar — za mała liczność na zdegenerowany) | `id_interaction` (surogat) |
-| `dim_population_year` | World Bank SP.POP.TOTL (`dim_population`, setup jednorazowy `main/sql/07`) | klucz złożony (iso, rok) spłaszczony: `iso*10000+rok` | `iso_year` |
+| `dim_population_year` | World Bank SP.POP.TOTL — `main/scripts/build_dim_population.py` → TSV → S3 → DDL `main/sql/07` (setup jednorazowy) | klucz złożony (iso, rok) spłaszczony: `iso*10000+rok` | `iso_year` |
 
 ## Etap 5 — Ładowanie faktów: GOLD + wymiary → `fact_events`
 
