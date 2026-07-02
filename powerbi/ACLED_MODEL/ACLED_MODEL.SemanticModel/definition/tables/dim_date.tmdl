@@ -1,0 +1,85 @@
+table dim_date
+	lineageTag: 362acbab-69e1-58f5-b700-0c879b371181
+	dataCategory: Time
+
+	column id_date
+		dataType: int64
+		formatString: 0
+		isHidden
+		lineageTag: e785e279-641d-5842-9bd7-d0be7b3d82c0
+		summarizeBy: none
+		sourceColumn: id_date
+
+		annotation SummarizationSetBy = Automatic
+
+	column date_key
+		dataType: dateTime
+		formatString: yyyy-mm-dd
+		isKey
+		lineageTag: a749051a-ab53-5b91-9291-a8208b2d92b4
+		summarizeBy: none
+		sourceColumn: date_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column year
+		dataType: int64
+		formatString: 0
+		lineageTag: b005bb1c-2a65-5640-9e74-005ab7e8b78a
+		summarizeBy: none
+		sourceColumn: year
+
+		annotation SummarizationSetBy = Automatic
+
+	column quarter
+		dataType: int64
+		formatString: 0
+		lineageTag: 8932c4b1-7efc-5001-bd36-4e9017aacbd5
+		summarizeBy: none
+		sourceColumn: quarter
+
+		annotation SummarizationSetBy = Automatic
+
+	column month
+		dataType: int64
+		formatString: 0
+		lineageTag: d4ed9c97-2eb2-55ea-bf52-d910266121ad
+		summarizeBy: none
+		sourceColumn: month
+
+		annotation SummarizationSetBy = Automatic
+
+	column month_name
+		dataType: string
+		sortByColumn: month
+		lineageTag: f314d06e-f227-58e6-805f-556e6ebfcd3c
+		summarizeBy: none
+		sourceColumn: month_name
+
+		annotation SummarizationSetBy = Automatic
+
+	hierarchy 'Kalendarz'
+		lineageTag: 069a09eb-b224-5f6c-b150-1655cd9fd76f
+
+		level 'Rok'
+			lineageTag: a2353d51-a540-568f-9b43-f9ee8da33ea1
+			column: year
+
+		level 'Kwartał'
+			lineageTag: a34d9337-da93-5c29-944e-98c0347a2af9
+			column: quarter
+
+		level 'Miesiąc'
+			lineageTag: 8bdda214-cf29-55fe-b474-1f7cdb927ac7
+			column: month_name
+
+	partition dim_date = m
+		mode: import
+		source =
+				let
+				    Source = Odbc.Query("dsn=ACLED_Athena", "SELECT * FROM acled_dev.dim_date")
+				in
+				    Source
+
+	annotation PBI_ResultType = Table
+

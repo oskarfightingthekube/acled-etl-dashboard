@@ -311,8 +311,12 @@ def build():
     wjson(os.path.join(RP,"definition","report.json"), {
         "$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/report/3.3.0/schema.json",
         "themeCollection":{
-            "baseTheme":{"name":"CY24SU10","type":"SharedResources"},
-            "customTheme":{"name":theme_name,"type":"RegisteredResources"}},
+            "baseTheme":{"name":"CY24SU10",
+                         "reportVersionAtImport":{"visual":"1.8.97","report":"2.0.97","page":"1.3.97"},
+                         "type":"SharedResources"},
+            "customTheme":{"name":theme_name,
+                           "reportVersionAtImport":{"visual":"1.8.97","report":"2.0.97","page":"1.3.97"},
+                           "type":"RegisteredResources"}},
         "resourcePackages":[
             {"resourcePackage":{"name":"SharedResources","type":"SharedResources","items":[]}},
             {"resourcePackage":{"name":"RegisteredResources","type":"RegisteredResources",

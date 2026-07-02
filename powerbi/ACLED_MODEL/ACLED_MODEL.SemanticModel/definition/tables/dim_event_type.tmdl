@@ -1,0 +1,62 @@
+table dim_event_type
+	lineageTag: a58d75cd-4c7d-5456-815c-1dd0ccfd4028
+
+	column id_event_type
+		dataType: int64
+		formatString: 0
+		isHidden
+		lineageTag: c2bc835f-f49b-58bb-810d-3875acbba039
+		summarizeBy: none
+		sourceColumn: id_event_type
+
+		annotation SummarizationSetBy = Automatic
+
+	column sub_event_type
+		dataType: string
+		lineageTag: 18143bbe-e512-5b92-a7a6-bf33ad0c2d13
+		summarizeBy: none
+		sourceColumn: sub_event_type
+
+		annotation SummarizationSetBy = Automatic
+
+	column event_type
+		dataType: string
+		lineageTag: 464085f1-fefb-576a-97a6-0559acab3f40
+		summarizeBy: none
+		sourceColumn: event_type
+
+		annotation SummarizationSetBy = Automatic
+
+	column disorder_type
+		dataType: string
+		lineageTag: e7b586cb-2812-5c5d-acef-62ad51d67ba2
+		summarizeBy: none
+		sourceColumn: disorder_type
+
+		annotation SummarizationSetBy = Automatic
+
+	hierarchy 'Typ zdarzenia'
+		lineageTag: 3c09aefb-dd78-5ad1-8c54-60a9a9071cdd
+
+		level 'Disorder'
+			lineageTag: 87dadf70-6e5a-5530-9a44-8fec7ad621f3
+			column: disorder_type
+
+		level 'Event'
+			lineageTag: 4d2a2fea-f246-5e6e-af80-dde30538b449
+			column: event_type
+
+		level 'Sub-event'
+			lineageTag: 5d90e3c6-a4b9-51f1-9840-5c3f336a8138
+			column: sub_event_type
+
+	partition dim_event_type = m
+		mode: import
+		source =
+				let
+				    Source = Odbc.Query("dsn=ACLED_Athena", "SELECT * FROM acled_dev.dim_event_type")
+				in
+				    Source
+
+	annotation PBI_ResultType = Table
+

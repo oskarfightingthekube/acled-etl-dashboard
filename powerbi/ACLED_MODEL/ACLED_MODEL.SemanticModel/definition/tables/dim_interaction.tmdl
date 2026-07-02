@@ -1,0 +1,31 @@
+table dim_interaction
+	lineageTag: 4738a971-9681-5f11-99c8-92954276c9c5
+
+	column id_interaction
+		dataType: int64
+		formatString: 0
+		isHidden
+		lineageTag: 22485bb7-2df3-5dc2-baa7-2426af9f2bf4
+		summarizeBy: none
+		sourceColumn: id_interaction
+
+		annotation SummarizationSetBy = Automatic
+
+	column interaction
+		dataType: string
+		lineageTag: b58c878e-d2e2-5572-a9ac-d3341d6bd8a1
+		summarizeBy: none
+		sourceColumn: interaction
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_interaction = m
+		mode: import
+		source =
+				let
+				    Source = Odbc.Query("dsn=ACLED_Athena", "SELECT * FROM acled_dev.dim_interaction")
+				in
+				    Source
+
+	annotation PBI_ResultType = Table
+

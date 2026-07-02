@@ -1,0 +1,185 @@
+table fact_events
+	lineageTag: 14fc6ca3-2f4f-5f6e-b77f-a5f2fabbaa1b
+
+	measure 'Total Events' = COUNTROWS(fact_events)
+		formatString: #,0
+		lineageTag: 5d6b1629-063e-591c-8311-7a5e5da437f5
+		displayFolder: Miary
+
+	measure 'Total Fatalities' = SUM(fact_events[fatalities])
+		formatString: #,0
+		lineageTag: eec24977-d191-53f0-a358-04b41207ada7
+		displayFolder: Miary
+
+	measure 'Fatalities per Event' = DIVIDE([Total Fatalities], [Total Events])
+		formatString: 0.00
+		lineageTag: 6eea8fd6-c2c8-59e6-baf7-9c80a17c910b
+		displayFolder: Miary
+
+	measure 'Civilian Targeting Events' = SUM(fact_events[civilian_targeting_flag])
+		formatString: #,0
+		lineageTag: 81c331c1-de5f-5228-b0bb-395adc1908a5
+		displayFolder: Miary
+
+	measure 'Pct Civilian Targeting' = DIVIDE([Civilian Targeting Events], [Total Events])
+		formatString: 0.0%
+		lineageTag: 916051bf-d63d-53be-b097-8c5e499e4456
+		displayFolder: Miary
+
+	measure 'Distinct Actors' = DISTINCTCOUNT(fact_events[id_actor])
+		formatString: #,0
+		lineageTag: a0dd0a89-9a0a-56fa-8329-2a57db653381
+		displayFolder: Miary
+
+	measure 'Distinct Countries' = DISTINCTCOUNT(fact_events[id_country])
+		formatString: #,0
+		lineageTag: 40392b7f-684e-5183-92eb-ba5b4646b9d5
+		displayFolder: Miary
+
+	measure 'Peaceful Protests' = CALCULATE([Total Events], dim_event_type[sub_event_type] = "Peaceful protest")
+		formatString: #,0
+		lineageTag: ed43a143-a1af-539d-9f2c-15c9535dd11d
+		displayFolder: Miary
+
+	measure 'Violent Demonstrations' = CALCULATE([Total Events], dim_event_type[sub_event_type] IN {"Violent demonstration", "Protest with intervention", "Excessive force against protesters"})
+		formatString: #,0
+		lineageTag: 6b7be6b8-9511-5c9d-8de9-6d842fc062c6
+		displayFolder: Miary
+
+	measure 'Peaceful to Violent Ratio' = DIVIDE([Peaceful Protests], [Violent Demonstrations])
+		formatString: 0.00
+		lineageTag: bcb461e7-d3a8-55d5-a14e-d408b91fd039
+		displayFolder: Miary
+
+	measure 'Events LY' = CALCULATE([Total Events], DATEADD(dim_date[date_key], -1, YEAR))
+		formatString: #,0
+		lineageTag: 067c4727-7e8d-5b77-aabe-e7490efc4f80
+		displayFolder: Miary
+
+	measure 'YoY Events %' = DIVIDE([Total Events] - [Events LY], [Events LY])
+		formatString: 0.0%
+		lineageTag: 0efbf882-3e0d-5739-b8cf-09705f729aca
+		displayFolder: Miary
+
+	measure 'Population' = SUM(dim_population_year[population])
+		formatString: #,0
+		lineageTag: d2c1204a-4eef-5fa1-8f6a-c918e92d8dc1
+		displayFolder: Miary
+
+	measure 'Events per 100k' = DIVIDE([Total Events] * 100000, [Population])
+		formatString: 0.00
+		lineageTag: bb20ff54-d841-5561-8742-c30a30bfb896
+		displayFolder: Miary
+
+	measure 'Fatalities per 100k' = DIVIDE([Total Fatalities] * 100000, [Population])
+		formatString: 0.00
+		lineageTag: 48958ac6-f38d-563a-9c5e-a73220567102
+		displayFolder: Miary
+
+	column event_id_cnty
+		dataType: string
+		isHidden
+		lineageTag: b5d9db84-671d-5506-9aae-4d106252bb17
+		summarizeBy: none
+		sourceColumn: event_id_cnty
+
+		annotation SummarizationSetBy = Automatic
+
+	column id_country
+		dataType: int64
+		formatString: 0
+		isHidden
+		lineageTag: c397a862-9760-5bb5-afb0-ada83abb20fe
+		summarizeBy: none
+		sourceColumn: id_country
+
+		annotation SummarizationSetBy = Automatic
+
+	column id_date
+		dataType: int64
+		formatString: 0
+		isHidden
+		lineageTag: 8d95e4d1-c368-5467-a8b0-5e04ea07c265
+		summarizeBy: none
+		sourceColumn: id_date
+
+		annotation SummarizationSetBy = Automatic
+
+	column id_event_type
+		dataType: int64
+		formatString: 0
+		isHidden
+		lineageTag: 76a26de8-8086-5720-8e94-3ad86554a3da
+		summarizeBy: none
+		sourceColumn: id_event_type
+
+		annotation SummarizationSetBy = Automatic
+
+	column id_actor
+		dataType: int64
+		formatString: 0
+		isHidden
+		lineageTag: f5f834d3-d043-5c46-8cd7-5defb091889f
+		summarizeBy: none
+		sourceColumn: id_actor
+
+		annotation SummarizationSetBy = Automatic
+
+	column id_source
+		dataType: int64
+		formatString: 0
+		isHidden
+		lineageTag: 24cf3b3e-09b0-5bf4-a020-87cd2cc0e15b
+		summarizeBy: none
+		sourceColumn: id_source
+
+		annotation SummarizationSetBy = Automatic
+
+	column id_interaction
+		dataType: int64
+		formatString: 0
+		isHidden
+		lineageTag: f4f2ca3d-0451-508b-809c-62e85f8a655c
+		summarizeBy: none
+		sourceColumn: id_interaction
+
+		annotation SummarizationSetBy = Automatic
+
+	column iso_year
+		dataType: int64
+		formatString: 0
+		isHidden
+		lineageTag: 4671a726-8dde-5e24-bc9f-53e1fb31b98f
+		summarizeBy: none
+		sourceColumn: iso_year
+
+		annotation SummarizationSetBy = Automatic
+
+	column fatalities
+		dataType: int64
+		formatString: #,0
+		lineageTag: d2590999-9923-5aaf-a9b3-c1d20b7a15cf
+		summarizeBy: sum
+		sourceColumn: fatalities
+
+		annotation SummarizationSetBy = Automatic
+
+	column civilian_targeting_flag
+		dataType: int64
+		formatString: #,0
+		lineageTag: b6af036e-ea75-53c9-864d-b230dc1b97a2
+		summarizeBy: sum
+		sourceColumn: civilian_targeting_flag
+
+		annotation SummarizationSetBy = Automatic
+
+	partition fact_events = m
+		mode: import
+		source =
+				let
+				    Source = Odbc.Query("dsn=ACLED_Athena", "SELECT * FROM acled_dev.fact_events")
+				in
+				    Source
+
+	annotation PBI_ResultType = Table
+

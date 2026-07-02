@@ -1,0 +1,29 @@
+relationship a1cb99c2-0761-5412-a483-35b2ebc01c41
+	fromColumn: fact_events.id_country
+	toColumn: dim_country.id_country
+
+relationship 72c87222-412b-5ff0-ab61-ed1d848e87de
+	fromColumn: fact_events.id_date
+	toColumn: dim_date.id_date
+
+relationship ba49a071-39d8-5cd1-b506-4d0a83d4e7d7
+	fromColumn: fact_events.id_event_type
+	toColumn: dim_event_type.id_event_type
+
+relationship 8086548d-db29-5f98-a27f-315169fa1897
+	fromColumn: fact_events.id_actor
+	toColumn: dim_actor.id_actor
+
+relationship f58a2f1b-be76-5106-9b6f-e02013efa530
+	fromColumn: fact_events.id_source
+	toColumn: dim_source.id_source
+
+relationship 4955f54a-7cf3-5713-83bc-dfe69c933c88
+	fromColumn: fact_events.id_interaction
+	toColumn: dim_interaction.id_interaction
+
+relationship ff15fab7-8578-5075-a59e-80696d57b4d4
+	fromColumn: fact_events.iso_year
+	toColumn: dim_population_year.iso_year
+	crossFilteringBehavior: bothDirections
+
