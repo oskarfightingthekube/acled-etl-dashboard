@@ -26,12 +26,12 @@ table fact_events
 		lineageTag: 916051bf-d63d-53be-b097-8c5e499e4456
 		displayFolder: Miary
 
-	measure 'Distinct Actors' = DISTINCTCOUNT(fact_events[actor1])
+	measure 'Distinct Actors' = DISTINCTCOUNT(fact_events[id_actor])
 		formatString: #,0
 		lineageTag: a0dd0a89-9a0a-56fa-8329-2a57db653381
 		displayFolder: Miary
 
-	measure 'Distinct Countries' = DISTINCTCOUNT(fact_events[iso])
+	measure 'Distinct Countries' = DISTINCTCOUNT(fact_events[id_country])
 		formatString: #,0
 		lineageTag: 40392b7f-684e-5183-92eb-ba5b4646b9d5
 		displayFolder: Miary
@@ -85,50 +85,63 @@ table fact_events
 
 		annotation SummarizationSetBy = Automatic
 
-	column iso
+	column id_country
 		dataType: int64
 		formatString: 0
 		isHidden
-		lineageTag: ff72bab9-a20e-52f4-9472-c9bc9582a9aa
+		lineageTag: c397a862-9760-5bb5-afb0-ada83abb20fe
 		summarizeBy: none
-		sourceColumn: iso
+		sourceColumn: id_country
 
 		annotation SummarizationSetBy = Automatic
 
-	column event_date
-		dataType: dateTime
-		formatString: yyyy-mm-dd
+	column id_date
+		dataType: int64
+		formatString: 0
 		isHidden
-		lineageTag: 294551a9-c0b8-5a1f-b11c-c683cde7f9e0
+		lineageTag: 8d95e4d1-c368-5467-a8b0-5e04ea07c265
 		summarizeBy: none
-		sourceColumn: event_date
+		sourceColumn: id_date
 
 		annotation SummarizationSetBy = Automatic
 
-	column sub_event_type
-		dataType: string
+	column id_event_type
+		dataType: int64
+		formatString: 0
 		isHidden
-		lineageTag: c8ee6d39-ef9e-5577-a00e-1a25380c617b
+		lineageTag: 76a26de8-8086-5720-8e94-3ad86554a3da
 		summarizeBy: none
-		sourceColumn: sub_event_type
+		sourceColumn: id_event_type
 
 		annotation SummarizationSetBy = Automatic
 
-	column actor1
-		dataType: string
+	column id_actor
+		dataType: int64
+		formatString: 0
 		isHidden
-		lineageTag: 09b09b82-3c3a-562f-8ae0-af412915946a
+		lineageTag: f5f834d3-d043-5c46-8cd7-5defb091889f
 		summarizeBy: none
-		sourceColumn: actor1
+		sourceColumn: id_actor
 
 		annotation SummarizationSetBy = Automatic
 
-	column source_scale
-		dataType: string
+	column id_source
+		dataType: int64
+		formatString: 0
 		isHidden
-		lineageTag: 4604465b-69e9-5197-a793-7e17b585730f
+		lineageTag: 24cf3b3e-09b0-5bf4-a020-87cd2cc0e15b
 		summarizeBy: none
-		sourceColumn: source_scale
+		sourceColumn: id_source
+
+		annotation SummarizationSetBy = Automatic
+
+	column id_interaction
+		dataType: int64
+		formatString: 0
+		isHidden
+		lineageTag: f4f2ca3d-0451-508b-809c-62e85f8a655c
+		summarizeBy: none
+		sourceColumn: id_interaction
 
 		annotation SummarizationSetBy = Automatic
 
@@ -142,11 +155,12 @@ table fact_events
 
 		annotation SummarizationSetBy = Automatic
 
-	column interaction
-		dataType: string
-		lineageTag: 59d1d3a9-d361-5a1c-b50f-3c2135f11770
-		summarizeBy: none
-		sourceColumn: interaction
+	column fatalities
+		dataType: int64
+		formatString: #,0
+		lineageTag: d2590999-9923-5aaf-a9b3-c1d20b7a15cf
+		summarizeBy: sum
+		sourceColumn: fatalities
 
 		annotation SummarizationSetBy = Automatic
 
@@ -156,42 +170,6 @@ table fact_events
 		lineageTag: b6af036e-ea75-53c9-864d-b230dc1b97a2
 		summarizeBy: sum
 		sourceColumn: civilian_targeting_flag
-
-		annotation SummarizationSetBy = Automatic
-
-	column latitude
-		dataType: double
-		formatString: #,0.00
-		lineageTag: 76105d43-aee5-560f-a524-010c2dece394
-		summarizeBy: none
-		sourceColumn: latitude
-
-		annotation SummarizationSetBy = Automatic
-
-	column longitude
-		dataType: double
-		formatString: #,0.00
-		lineageTag: c582b042-0209-5397-a16b-7b73d00d437d
-		summarizeBy: none
-		sourceColumn: longitude
-
-		annotation SummarizationSetBy = Automatic
-
-	column year
-		dataType: int64
-		formatString: 0
-		lineageTag: 3278d802-3628-5f35-a806-f42474501b46
-		summarizeBy: none
-		sourceColumn: year
-
-		annotation SummarizationSetBy = Automatic
-
-	column fatalities
-		dataType: int64
-		formatString: #,0
-		lineageTag: d2590999-9923-5aaf-a9b3-c1d20b7a15cf
-		summarizeBy: sum
-		sourceColumn: fatalities
 
 		annotation SummarizationSetBy = Automatic
 

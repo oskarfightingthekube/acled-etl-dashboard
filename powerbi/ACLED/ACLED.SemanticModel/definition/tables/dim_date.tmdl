@@ -2,6 +2,16 @@ table dim_date
 	lineageTag: 362acbab-69e1-58f5-b700-0c879b371181
 	dataCategory: Time
 
+	column id_date
+		dataType: int64
+		formatString: 0
+		isHidden
+		lineageTag: e785e279-641d-5842-9bd7-d0be7b3d82c0
+		summarizeBy: none
+		sourceColumn: id_date
+
+		annotation SummarizationSetBy = Automatic
+
 	column date_key
 		dataType: dateTime
 		formatString: yyyy-mm-dd
@@ -21,6 +31,15 @@ table dim_date
 
 		annotation SummarizationSetBy = Automatic
 
+	column quarter
+		dataType: int64
+		formatString: 0
+		lineageTag: 8932c4b1-7efc-5001-bd36-4e9017aacbd5
+		summarizeBy: none
+		sourceColumn: quarter
+
+		annotation SummarizationSetBy = Automatic
+
 	column month
 		dataType: int64
 		formatString: 0
@@ -36,15 +55,6 @@ table dim_date
 		lineageTag: f314d06e-f227-58e6-805f-556e6ebfcd3c
 		summarizeBy: none
 		sourceColumn: month_name
-
-		annotation SummarizationSetBy = Automatic
-
-	column quarter
-		dataType: int64
-		formatString: 0
-		lineageTag: 8932c4b1-7efc-5001-bd36-4e9017aacbd5
-		summarizeBy: none
-		sourceColumn: quarter
 
 		annotation SummarizationSetBy = Automatic
 

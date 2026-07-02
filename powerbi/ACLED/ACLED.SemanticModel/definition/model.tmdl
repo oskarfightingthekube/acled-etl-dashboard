@@ -3,7 +3,7 @@ model Model
 	defaultPowerBIDataSourceVersion: powerBI_V3
 	sourceQueryCulture: en-US
 
-annotation PBI_QueryOrder = ["fact_events", "dim_country", "dim_date", "dim_event_type", "dim_actor", "dim_source", "dim_population_year"]
+annotation PBI_QueryOrder = ["fact_events", "dim_country", "dim_date", "dim_event_type", "dim_actor", "dim_source", "dim_interaction", "dim_population_year"]
 
 ref table fact_events
 ref table dim_country
@@ -11,6 +11,7 @@ ref table dim_date
 ref table dim_event_type
 ref table dim_actor
 ref table dim_source
+ref table dim_interaction
 ref table dim_population_year
 
 ref cultureInfo en-US

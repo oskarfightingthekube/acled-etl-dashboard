@@ -20,13 +20,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "fact_events"
+                      "Entity": "dim_interaction"
                     }
                   },
                   "Property": "interaction"
                 }
               },
-              "queryRef": "fact_events.interaction",
+              "queryRef": "dim_interaction.interaction",
               "nativeQueryRef": "interaction",
               "active": true
             }

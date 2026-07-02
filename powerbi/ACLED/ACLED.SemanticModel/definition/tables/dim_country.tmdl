@@ -1,6 +1,16 @@
 table dim_country
 	lineageTag: 81217dd6-a743-5429-903e-b438dc27cbb5
 
+	column id_country
+		dataType: int64
+		formatString: 0
+		isHidden
+		lineageTag: d3df086d-759d-51eb-8114-3bce88665077
+		summarizeBy: none
+		sourceColumn: id_country
+
+		annotation SummarizationSetBy = Automatic
+
 	column iso
 		dataType: int64
 		formatString: 0

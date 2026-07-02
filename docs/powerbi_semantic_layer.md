@@ -18,18 +18,21 @@ Power BI (model semantyczny + raport)`. To wariant dozwolonego stacku
 
 ## 1. Import (płaski) + model gwiazdy
 Pobierz dane → ODBC (DSN `ACLED_Athena`) → zaimportuj **tylko** tabele gwiazdy
-(7): `fact_events`, `dim_country`, `dim_date`, `dim_event_type`, `dim_actor`,
-`dim_source`, `dim_population_year`. Import, nie DirectQuery.
+(8): `fact_events`, `dim_country`, `dim_date`, `dim_event_type`, `dim_actor`,
+`dim_source`, `dim_interaction`, `dim_population_year`. Import, nie DirectQuery.
 
 Relacje (Widok modelu), wszystkie **wiele-do-jednego (\*:1)**, filtr pojedynczy,
 wymiar po stronie 1 (zweryfikowane: każdy klucz wymiaru unikalny, także
 case-insensitive — Power BI ignoruje wielkość liter w kluczach tekstowych):
-- `fact_events[iso]` → `dim_country[iso]`
-- `fact_events[event_date]` → `dim_date[date_key]`
-- `fact_events[sub_event_type]` → `dim_event_type[sub_event_type]`
-- `fact_events[actor1]` → `dim_actor[actor]`
-- `fact_events[source_scale]` → `dim_source[source_scale]`
+- `fact_events[id_country]` → `dim_country[id_country]`
+- `fact_events[id_date]` → `dim_date[id_date]`
+- `fact_events[id_event_type]` → `dim_event_type[id_event_type]`
+- `fact_events[id_actor]` → `dim_actor[id_actor]`
+- `fact_events[id_source]` → `dim_source[id_source]`
+- `fact_events[id_interaction]` → `dim_interaction[id_interaction]`
 - `fact_events[iso_year]` → `dim_population_year[iso_year]`
+
+(Klucze sztuczne `id_*` — po imporcie ukryj je w widoku raportu.)
 
 Ukryj klucze techniczne (prawy klik kolumny → Ukryj w widoku raportu).
 Oznacz `dim_date` jako tabelę dat: zaznacz `dim_date` → Narzędzia tabeli →
@@ -52,8 +55,8 @@ Total Fatalities = SUM(fact_events[fatalities])
 Fatalities per Event = DIVIDE([Total Fatalities], [Total Events])
 Civilian Targeting Events = SUM(fact_events[civilian_targeting_flag])
 Pct Civilian Targeting = DIVIDE([Civilian Targeting Events], [Total Events])
-Distinct Actors = DISTINCTCOUNT(fact_events[actor1])
-Distinct Countries = DISTINCTCOUNT(fact_events[iso])
+Distinct Actors = DISTINCTCOUNT(fact_events[id_actor])
+Distinct Countries = DISTINCTCOUNT(fact_events[id_country])
 ```
 Miary warunkowe (CALCULATE) — protesty vs przemoc (Q5):
 ```DAX
@@ -94,7 +97,7 @@ Wszystko na JEDNYM modelu (measures + slicery + drill-down). Wzorzec ze skryptu:
 | Sezonowość | Q4 | macierz + heatmapa | dim_date[month_name] (wiersze), year (kolumny) | — | Total Events (formatowanie warunkowe = kolor tła) |
 | Typy zdarzeń | Q5 | słupkowy + KPI | dim_event_type[sub_event_type] | — | Total Fatalities; karta = Peaceful to Violent Ratio |
 | Aktorzy | Q6 | słupkowy (Top N) | dim_actor[actor] | — | Total Events / Total Fatalities |
-| Interakcje | Q6 | słupkowy | fact_events[interaction] | — | Total Fatalities / Fatalities per Event |
+| Interakcje | Q6 | słupkowy | dim_interaction[interaction] | — | Total Fatalities / Fatalities per Event |
 | Cywile | Q7 | słupkowy + liniowy | dim_country[region] / dim_date | region | Pct Civilian Targeting |
 | Źródła | Q8 | słupkowy skumulowany | dim_country[region] | dim_source[source_scale] | Total Events |
 | Eskalacja | Q9 | słupkowy + punktowy | dim_country[country] × dim_date[year] | — | YoY Events % ; scatter: Total Events vs Total Fatalities |

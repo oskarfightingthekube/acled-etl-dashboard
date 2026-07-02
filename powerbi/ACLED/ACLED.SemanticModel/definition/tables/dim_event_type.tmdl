@@ -1,6 +1,16 @@
 table dim_event_type
 	lineageTag: a58d75cd-4c7d-5456-815c-1dd0ccfd4028
 
+	column id_event_type
+		dataType: int64
+		formatString: 0
+		isHidden
+		lineageTag: c2bc835f-f49b-58bb-810d-3875acbba039
+		summarizeBy: none
+		sourceColumn: id_event_type
+
+		annotation SummarizationSetBy = Automatic
+
 	column sub_event_type
 		dataType: string
 		lineageTag: 18143bbe-e512-5b92-a7a6-bf33ad0c2d13
