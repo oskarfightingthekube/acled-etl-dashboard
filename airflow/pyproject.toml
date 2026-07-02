@@ -1,0 +1,14 @@
+[project]
+name = "airflow"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "acled-aws",
+    "apache-airflow>=3.2.2",
+    "apache-airflow-providers-amazon>=9.31.0",
+]
+
+[tool.uv.sources]
+acled-aws = { path = "../main", editable = true }

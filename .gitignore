@@ -5,7 +5,44 @@ crash.log
 crash.*.log
 *.tfvars
 !*.tfvars.example
-*idea/
+../.idea/# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+
+# Environment variables / secrets
+.env
+*.env
+!*.env.example
+
+# Airflow-specific
+airflow/airflow.cfg
+airflow/airflow.db
+airflow/airflow.db-shm
+airflow/airflow.db-wal
+airflow/logs/
+airflow/simple_auth_manager_passwords.json.generated
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+crash.*.log
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
 *env
 *__pycache__/
 
