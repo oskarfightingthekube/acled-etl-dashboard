@@ -57,7 +57,7 @@ def snapshot():
 
 
 def render(count, fatal, newest_date, newest, baseline, ts):
-    big = pyfiglet.figlet_format(f"{count:,}".replace(",", " "), font="big")
+    big = pyfiglet.figlet_format(f"{count:,}".replace(",", " "), font="big").rstrip("\n")
     delta = count - baseline
     if delta > 0:
         delta_txt = Text(f"▲ +{delta:,} NOWYCH ZDARZEŃ OD STARTU DEMA".replace(",", " "),
@@ -87,7 +87,7 @@ def render(count, fatal, newest_date, newest, baseline, ts):
                 + f"   ·   odświeżono: {ts}   ·   ACLED · bronze→silver→gold→gwiazda · Airflow",
                 style="dim")
     layout = Layout()
-    layout.split_column(Layout(head, size=12), Layout(t), Layout(foot, size=1))
+    layout.split_column(Layout(head, size=13), Layout(t), Layout(foot, size=1))
     return layout
 
 
