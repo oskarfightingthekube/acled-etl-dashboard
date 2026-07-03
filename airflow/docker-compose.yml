@@ -18,10 +18,10 @@ services:
       PYTHONPATH: /opt/airflow
       # deps DAG-a acled_manual_backfill (import main.src.*)
       _PIP_ADDITIONAL_REQUIREMENTS: "pydantic-settings requests"
-      # stuby, żeby Settings() importował się bez prawdziwego konta ACLED;
-      # realny ingest = podmień na prawdziwe albo trzymaj w main/.env
-      ACLED_EMAIL: stub@example.com
-      ACLED_PASSWORD: stub
+      # realne konto ACLED: wpisz do airflow/.env (gitignored) — compose podstawi je tu;
+      # bez airflow/.env zostają stuby (Settings() importuje się, ingest z API nie zadziała)
+      ACLED_EMAIL: ${ACLED_EMAIL:-stub@example.com}
+      ACLED_PASSWORD: ${ACLED_PASSWORD:-stub}
     volumes:
       - ./dags:/opt/airflow/dags
       - ../main:/opt/airflow/main:ro           # pakiet main dla DAG-a backfill
