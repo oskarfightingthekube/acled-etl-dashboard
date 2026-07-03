@@ -44,9 +44,12 @@ demo/etl_demo.sh status                        # potwierdzasz: mniej zdarzeń, n
 ```
 Od tego momentu system jest „cofnięty" i gotowy do pokazu.
 
-### Na żywo przy prowadzącej
-1. **Stan PRZED** — terminal: `demo/etl_demo.sh status`
-   → pokaż: liczbę zdarzeń, najnowszą datę (2025-06-29), 5 najnowszych zdarzeń, znacznik przyrostu.
+### Na żywo przy prowadzącej (wersja z licznikiem — polecana)
+0. Terminal na pełnym ekranie (rzutnik): `python3 demo/pokaz.py`
+   → wielki licznik zdarzeń (stan bazowy) + lista najświeższych zdarzeń;
+   odświeża się sam co 20 s. Zostawiasz włączony przez cały pokaz.
+1. **Stan PRZED** — widoczny na liczniku (alternatywnie tekstowo:
+   `demo/etl_demo.sh status`).
 2. **Ingest** (wybierz wariant):
    - **A. Live z API** (jest `main/.env` z kontem ACLED): Airflow UI →
      `acled_manual_backfill` → Trigger → pokaż po kolei: pobór stron z API,
@@ -55,9 +58,10 @@ Od tego momentu system jest „cofnięty" i gotowy do pokazu.
      nowej paczki przez źródło" (przywraca schowany przyrost do bronze).
      Potem Airflow UI → `acled_pipeline` → **Trigger z run_glue=TRUE**.
 3. W trakcie czekania: pokaż graf DAG-a, klikaj taski → logi; opowiedz walidację.
-4. **Stan PO** — `demo/etl_demo.sh status`
-   → liczba zdarzeń WZROSŁA, najnowsza data = 2025-07-02, na liście nowe zdarzenia
-   (Jemen/USA/Ukraina). `validate` zielony = warstwy spójne.
+4. **Stan PO** — licznik sam skacze po zakończeniu DAG-a: zielony pasek
+   „▲ +198 NOWYCH ZDARZEŃ OD STARTU DEMA", najnowsza data przeskakuje na
+   2025-07-02, w tabeli pojawiają się świeże zdarzenia (Jemen/USA/Ukraina).
+   `validate` zielony = warstwy spójne. (Tekstowo: `demo/etl_demo.sh status`.)
 5. Puenta: „pipeline jest idempotentny i zwalidowany — możemy to powtórzyć od ręki"
    (i faktycznie możesz: revert → run → restore → run).
 
