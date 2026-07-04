@@ -8,6 +8,7 @@ _ENV_FILE = Path(__file__).resolve().parents[2] / "main" / ".env"
 class Settings(BaseSettings):
     email: str
     password: str
+    access_token: str = ""   # opcjonalnie: gotowy token zamiast logowania hasłem (konta Google SSO)
     environment: str = "dev"
     base_url: str = "https://acleddata.com/"
     page_size: int = 5_000

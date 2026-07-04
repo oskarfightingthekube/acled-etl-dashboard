@@ -22,6 +22,7 @@ services:
       # bez airflow/.env zostają stuby (Settings() importuje się, ingest z API nie zadziała)
       ACLED_EMAIL: ${ACLED_EMAIL:-stub@example.com}
       ACLED_PASSWORD: ${ACLED_PASSWORD:-stub}
+      ACLED_ACCESS_TOKEN: ${ACLED_ACCESS_TOKEN:-}
     volumes:
       - ./dags:/opt/airflow/dags
       - ../main:/opt/airflow/main:ro           # pakiet main dla DAG-a backfill

@@ -28,6 +28,10 @@ class ACLEDClient:
         self._session.close()
 
     def get_token(self):
+        if self.settings.access_token:
+            self._token = Token(access_token=self.settings.access_token, refresh_token="")
+            logger.info("using provided ACLED_ACCESS_TOKEN")
+            return
         response = self._session.post(
             self.settings.auth_url,
             data={
