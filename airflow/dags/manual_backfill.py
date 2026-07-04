@@ -85,4 +85,6 @@ silver_transform = GlueJobOperator(
     dag=dag,
 )
 
-[run_delete_load, run_event_load] >> check_new_data >> [run_crawler_events, run_crawler_deletes] >> silver_transform
+# sekwencyjnie, nie równolegle: ACLED przy wydaniu tokena unieważnia poprzedni,
+# więc dwa równoległe loginy nawzajem ubijają sobie sesje (401 w trakcie paginacji)
+run_delete_load >> run_event_load >> check_new_data >> [run_crawler_events, run_crawler_deletes] >> silver_transform

@@ -59,6 +59,11 @@ class ACLEDClient:
             if extra_payload:
                 payload.update(extra_payload)
             response = self._session.get(url, params=payload, headers=headers)
+            if response.status_code == 401:
+                # token unieważniony w trakcie (np. równoległy login) — jednorazowy re-login
+                self.get_token()
+                headers = {"Authorization": f"Bearer {self._token.access_token}"}
+                response = self._session.get(url, params=payload, headers=headers)
 
             response.raise_for_status()
             data = response.text
