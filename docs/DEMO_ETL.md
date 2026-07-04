@@ -36,13 +36,17 @@ DAG można puszczać wielokrotnie), **przyrostowość** (znacznik czasu w state)
 ### Przygotowanie (rano, przed zajęciami)
 ```bash
 cd ~/Desktop/acled-etl-dashboard
-(cd airflow && docker compose up -d)          # Airflow wstaje
-demo/etl_demo.sh status                        # notujesz stan wyjściowy
-demo/etl_demo.sh revert                        # chowasz przyrost 2026-07-02 do backupu
-# Airflow UI -> acled_pipeline -> Trigger z run_glue=TRUE -> czekasz na zielono (~8 min)
-demo/etl_demo.sh status                        # potwierdzasz: mniej zdarzeń, najnowsza data 2025-06-29
+open -a OrbStack                               # Docker musi żyć
+(cd airflow && docker compose up -d)           # Airflow wstaje
+DZIEN=2026-07-04 demo/etl_demo.sh przygotuj    # revert dzisiejszej paczki + trigger pipeline
+# czekasz ~8 min na zielono (run_glue=TRUE ustawia się samo)
+demo/etl_demo.sh status                        # potwierdzasz: 2 669 096, najnowsza data 2025-06-29
+python3 demo/pokaz.py                          # licznik DOPIERO TERAZ (łapie baseline "wczorajszy")
 ```
 Od tego momentu system jest „cofnięty" i gotowy do pokazu.
+Hasło do Airflow UI (regeneruje się przy odtworzeniu kontenera):
+`cd airflow && docker compose exec airflow cat /opt/airflow/simple_auth_manager_passwords.json.generated`
+Konto ACLED: `airflow/.env` — działa, przetestowane 4.07.
 
 ### Na żywo przy prowadzącej (wersja z licznikiem — polecana)
 0. Terminal na pełnym ekranie (rzutnik): `python3 demo/pokaz.py`
@@ -51,17 +55,20 @@ Od tego momentu system jest „cofnięty" i gotowy do pokazu.
 1. **Stan PRZED** — widoczny na liczniku (alternatywnie tekstowo:
    `demo/etl_demo.sh status`).
 2. **Ingest** (wybierz wariant):
-   - **A. Live z API** (jest `main/.env` z kontem ACLED): Airflow UI →
-     `acled_manual_backfill` → Trigger → pokaż po kolei: pobór stron z API,
-     ShortCircuit, crawlery, silver (~6–8 min). Opowiadasz przepływ z sekcji 1.
-   - **B. Fallback bez API**: `demo/etl_demo.sh restore` — „symulacja dostarczenia
-     nowej paczki przez źródło" (przywraca schowany przyrost do bronze).
-     Potem Airflow UI → `acled_pipeline` → **Trigger z run_glue=TRUE**.
+   - **A. Live z API — GŁÓWNY (przetestowany 4.07)**: Airflow UI →
+     `acled_manual_backfill` → Trigger (full=false). W logach `event_load` widać
+     pobór stron z API na żywo (~30 stron, bo lecą też korekty wsteczne — patrz
+     pytania niżej). Potem crawlery + silver (~6–8 min łącznie). Po zielonym:
+     `acled_pipeline` → Trigger z **run_glue=FALSE** (silver już świeży) — ~1 min.
+   - **B. Fallback bez API**: `DZIEN=2026-07-04 demo/etl_demo.sh restore` —
+     „symulacja dostarczenia paczki przez źródło". Potem Airflow UI →
+     `acled_pipeline` → **Trigger z run_glue=TRUE** (~8 min).
 3. W trakcie czekania: pokaż graf DAG-a, klikaj taski → logi; opowiedz walidację.
 4. **Stan PO** — licznik sam skacze po zakończeniu DAG-a: zielony pasek
-   „▲ +198 NOWYCH ZDARZEŃ OD STARTU DEMA", najnowsza data przeskakuje na
-   2025-07-02, w tabeli pojawiają się świeże zdarzenia (Jemen/USA/Ukraina).
-   `validate` zielony = warstwy spójne. (Tekstowo: `demo/etl_demo.sh status`.)
+   „▲ +323 NOWYCH ZDARZEŃ OD STARTU DEMA", najnowsza data przeskakuje
+   z 2025-06-29 na 2025-07-04 (wariant A; przy B: +198 i 2025-07-02), w tabeli
+   świeże zdarzenia (Jemen/USA). `validate` zielony = warstwy spójne.
+   (Tekstowo: `demo/etl_demo.sh status`.)
 5. Puenta: „pipeline jest idempotentny i zwalidowany — możemy to powtórzyć od ręki"
    (i faktycznie możesz: revert → run → restore → run).
 
@@ -109,6 +116,12 @@ UNION ALL SELECT 'fact', count(*), sum(fatalities) FROM acled_dev.fact_events;
   DAG robi się czerwony.
 - **„Co jak uruchomię drugi raz?"** — idempotencja: DROP + czyszczenie prefixu +
   CTAS; wynik identyczny, żadnych duplikatów.
+- **„Czemu pobiera ~30 stron (150 tys. wierszy), skoro nowych zdarzeń jest kilkaset?"**
+  — `timestamp` w API to znacznik MODYFIKACJI rekordu, nie data zdarzenia: ACLED
+  codziennie koryguje wstecznie tysiące starych zdarzeń. Pobieramy nowe + korekty;
+  deduplikacja w silver (najnowsza wersja wygrywa, SCD typ 1) sprawia, że korekta
+  zastępuje starą wersję zamiast ją duplikować. Dlatego licznik rośnie o setki,
+  nie o 150 tysięcy.
 - **„Jak cofnęliście dane do pokazu?"** — przyrost bronze to osobny folder dnia;
   revert = przeniesienie folderu do backupu + cofnięcie znacznika; warstwy wyżej
   odbudowują się deterministycznie z bronze. To zresztą dowód na wartość
