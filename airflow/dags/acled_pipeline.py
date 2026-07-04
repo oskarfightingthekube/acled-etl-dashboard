@@ -42,8 +42,8 @@ SILVER_GLUE_JOB = "acled-silver-transform-dev"
 BRONZE_CRAWLERS = ["acled-bronze-events-dev", "acled-bronze-deletes-dev"]
 
 
-def _athena(sql: str) -> None:
-    """Run one Athena statement, block until done, raise on failure."""
+def _athena(sql: str) -> str:
+    """Run one Athena statement, block until done, raise on failure. Returns query id."""
     c = boto3.client("athena", region_name=REGION)
     qid = c.start_query_execution(
         QueryString=sql,
@@ -56,20 +56,27 @@ def _athena(sql: str) -> None:
         if st["State"] in ("SUCCEEDED", "FAILED", "CANCELLED"):
             if st["State"] != "SUCCEEDED":
                 raise RuntimeError(f"Athena {st['State']}: {st.get('StateChangeReason')}")
-            return
+            return qid
         time.sleep(2)
 
 
 def _rebuild(table: str, prefix: str, ctas_body: str) -> None:
     """Idempotent CTAS: drop table, wipe its S3 prefix, re-create."""
+    t0 = time.time()
+    print(f">> {table}: DROP starej wersji + czyszczenie s3://{GOLD_BUCKET}/{prefix}")
     _athena(f"DROP TABLE IF EXISTS {DB}.{table}")
     boto3.resource("s3", region_name=REGION).Bucket(GOLD_BUCKET).objects.filter(
         Prefix=prefix
     ).delete()
+    print(f">> {table}: CREATE TABLE AS SELECT (Athena CTAS)...")
     _athena(
         f"CREATE TABLE {DB}.{table} WITH (format='PARQUET', "
         f"external_location='s3://{GOLD_BUCKET}/{prefix}') AS {ctas_body}"
     )
+    qid = _athena(f"SELECT count(*) FROM {DB}.{table}")
+    n = boto3.client("athena", region_name=REGION).get_query_results(
+        QueryExecutionId=qid)["ResultSet"]["Rows"][1]["Data"][0]["VarCharValue"]
+    print(f">> {table}: gotowa — {int(n):,} wierszy, {time.time() - t0:.0f} s".replace(",", " "))
 
 
 GOLD_EVENTS_WIDE = """
@@ -255,9 +262,11 @@ def acled_pipeline():
         stats = {r["Data"][0]["VarCharValue"]:
                  (int(r["Data"][1]["VarCharValue"]), int(r["Data"][2]["VarCharValue"]))
                  for r in rows}
-        print(f"rekoncyliacja: {stats}")
+        for layer, (cnt, fat) in stats.items():
+            print(f">> {layer:6s}: {cnt:,} zdarzeń, {fat:,} ofiar".replace(",", " "))
         assert stats["silver"] == stats["gold"] == stats["fact"], f"warstwy niespójne: {stats}"
         assert stats["fact"][0] > 2_600_000, f"podejrzanie mało zdarzeń: {stats['fact'][0]}"
+        print(">> OK: silver == gold == fact — warstwy spójne")
 
     gold = gold_events_wide()
     fact = fact_events()
