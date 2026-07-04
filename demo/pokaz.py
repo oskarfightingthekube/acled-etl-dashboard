@@ -83,11 +83,15 @@ def render(count, fatal, newest_date, newest, baseline, ts):
     for r in newest:
         t.add_row(*r)
 
-    foot = Text(f" suma ofiar: {fatal:,}".replace(",", " ")
-                + f"   ·   odświeżono: {ts}   ·   ACLED · bronze→silver→gold→gwiazda · Airflow",
-                style="dim")
+    foot = Group(
+        Text(" SQL (Athena, co 20 s):  SELECT count(*), sum(fatalities), max(event_date) FROM acled_dev.gold_events_wide", style="dim"),
+        Text("                         SELECT event_date, country, event_type, fatalities FROM ... ORDER BY event_date DESC LIMIT 6", style="dim"),
+        Text(f" suma ofiar: {fatal:,}".replace(",", " ")
+             + f"   ·   odświeżono: {ts}   ·   ACLED · bronze→silver→gold→gwiazda · Airflow",
+             style="dim"),
+    )
     layout = Layout()
-    layout.split_column(Layout(head, size=13), Layout(t), Layout(foot, size=1))
+    layout.split_column(Layout(head, size=13), Layout(t), Layout(foot, size=3))
     return layout
 
 
