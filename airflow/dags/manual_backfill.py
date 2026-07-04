@@ -37,9 +37,13 @@ def _check_new_data(**context):
     event_count = ti.xcom_pull(task_ids="event_load") or 0
 
     total = delete_count + event_count
+    print(f">> pobrano z API: {event_count:,} wierszy zdarzeń, "
+          f"{delete_count:,} wycofanych (razem {total:,})".replace(",", " "))
     if total == 0:
+        print(">> brak nowych danych — ShortCircuit: crawlery i silver pominięte")
         return False
 
+    print(">> są nowe dane — przepuszczam dalej: crawlery + silver transform")
     return True
 
 
